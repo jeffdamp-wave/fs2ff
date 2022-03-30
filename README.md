@@ -8,10 +8,11 @@ This fork of astenlund/fs2ff that emplements the GDL90 protocol as an option ins
 see astenlund/fs2ff
 
 ## Does it work with other EFB apps?
-Yes any the use GDL90
+Yes any that use GDL90 or the SIM UPD protocol
 
 ### Garmin Pilot
-
+<update> GP now supports Stratux.  By selecting Stratux you don't have to do any special IP trickery.  I've only tested this on a 192.168.0.x subnet but seemed to work fine.
+   
 Sort of.  This is a PITA the PC that is running FS2FF needs to have an IP of 10.29.39.1 and the device (iPad) needs to be in that subnet 10.29.39.x otherwise GP will ignore the traffic.  I have on board wifi on my PC.  It required enabling that has a hotspot setting a static ip on that NIC to 10.29.39.1 and then a static IP on the iPad of 10.29.39.2
 
 ### Other apps (not verified by me)
