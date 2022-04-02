@@ -10,12 +10,12 @@ I would like to figure out MSF2020 weather data when it is not set to realtime a
 see astenlund/fs2ff
 
 ## Does it work with other EFB apps?
-Yes any that use GDL90 or the SIM UPD protocol
+Yes any that use GDL90 or the xPlane UPD protocol
 
-### Garmin Pilot
-<update> GP now supports Stratux.  By selecting Stratux you don't have to do any special IP trickery.  I've only tested this on a 192.168.0.x subnet but seemed to work fine.
+### GDL90 Device emulation (test on GP and FF)
+Stratux - GP now supports the Stratux device and seemd to work reasonably well. By selecting Stratux you don't have to do any special IP trickery. I've only tested this on a 192.168.0.x subnet but seemed to work fine.  The bigest advantage you will see here is a lot smoother Synthetic Vision over the Xplane protocol. I was able to load an RNAV aproach and fly it to minimums fairly well. You don't get a elevation marker you need to do a step down approach.
    
-Sort of.  This is a PITA the PC that is running FS2FF needs to have an IP of 10.29.39.1 and the device (iPad) needs to be in that subnet 10.29.39.x otherwise GP will ignore the traffic.  I have on board wifi on my PC.  It required enabling that has a hotspot setting a static ip on that NIC to 10.29.39.1 and then a static IP on the iPad of 10.29.39.2
+Stratus emulation- This is a PITA and I don't recommend it. The PC that is running FS2FF needs to have an IP of 10.29.39.1 and the device (iPad) needs to be in that subnet 10.29.39.x otherwise GP will ignore the traffic.  I have on board wifi on my PC.  It required enabling that has a hotspot setting a static ip on that NIC to 10.29.39.1 and then a static IP on the iPad of 10.29.39.2
 
 ### Other apps (not verified by me)
 
