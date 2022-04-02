@@ -3,6 +3,8 @@
 ## What is it?
 This fork of astenlund/fs2ff that emplements the GDL90 protocol as an option instead of using XPlane protocol. This is a work in progress as there is still a lot of things left to do.  I'm just doing this work to learn more about GDL90 and how the different EFBs work with it.
 
+I would like to figure out MSF2020 weather data when it is not set to realtime and simulate FIS-B towers.  I just haven't found a good way to retrieve the data from the sim.
+
 ## How do I use it?
 
 see astenlund/fs2ff
