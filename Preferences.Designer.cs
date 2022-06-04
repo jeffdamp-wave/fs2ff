@@ -12,7 +12,7 @@ namespace fs2ff {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "16.7.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "16.10.0.0")]
     internal sealed partial class Preferences : global::System.Configuration.ApplicationSettingsBase {
         
         private static Preferences defaultInstance = ((Preferences)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new Preferences())));
@@ -46,52 +46,43 @@ namespace fs2ff {
                 this["att_enabled"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool gdl90_enabled
-        {
-            get
-            {
+        public bool gdl90_enabled {
+            get {
                 return ((bool)(this["gdl90_enabled"]));
             }
-            set
-            {
+            set {
                 this["gdl90_enabled"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool stratus_enabled
-        {
-            get
-            {
+        public bool stratus_enabled {
+            get {
                 return ((bool)(this["stratus_enabled"]));
             }
-            set
-            {
+            set {
                 this["stratus_enabled"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool stratux_enabled
-        {
-            get
-            {
+        public bool stratux_enabled {
+            get {
                 return ((bool)(this["stratux_enabled"]));
             }
-            set
-            {
+            set {
                 this["stratux_enabled"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
@@ -127,7 +118,7 @@ namespace fs2ff {
                 this["ip_detection_enabled"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
@@ -142,7 +133,7 @@ namespace fs2ff {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("20")]
+        [global::System.Configuration.DefaultSettingValueAttribute("10")]
         public uint att_freq {
             get {
                 return ((uint)(this["att_freq"]));
@@ -161,6 +152,18 @@ namespace fs2ff {
             }
             set {
                 this["ip_hint_time"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool hide_static_traffic_enabled {
+            get {
+                return ((bool)(this["hide_static_traffic_enabled"]));
+            }
+            set {
+                this["hide_static_traffic_enabled"] = value;
             }
         }
     }

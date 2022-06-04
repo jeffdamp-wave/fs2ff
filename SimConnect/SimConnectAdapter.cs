@@ -104,7 +104,7 @@ namespace fs2ff.SimConnect
             AddToDataDefinition(DEFINITION.Attitude, "AIRSPEED TRUE", "Knots");
             AddToDataDefinition(DEFINITION.Attitude, "PRESSURE ALTITUDE", "Feet");
             AddToDataDefinition(DEFINITION.Attitude, "VELOCITY WORLD Y", "Feet per minute");
-            AddToDataDefinition(DEFINITION.Attitude, "G FORCE", null);
+            AddToDataDefinition(DEFINITION.Attitude, "G FORCE", "Gforce");
 
             _simConnect?.RegisterDataDefineStruct<Attitude>(DEFINITION.Attitude);
         }
@@ -140,8 +140,15 @@ namespace fs2ff.SimConnect
             AddToDataDefinition(DEFINITION.Traffic, "AIRSPEED TRUE", "Knots");
             AddToDataDefinition(DEFINITION.Traffic, "TRANSPONDER CODE:1", null, SIMCONNECT_DATATYPE.INT32);
             AddToDataDefinition(DEFINITION.Traffic, "TRANSPONDER STATE:1", null, SIMCONNECT_DATATYPE.INT32);
+            AddToDataDefinition(DEFINITION.Traffic, "ATC MODEL", null, SIMCONNECT_DATATYPE.STRING32);
+            AddToDataDefinition(DEFINITION.Traffic, "MACH MAX OPERATE", "Mach");
+            AddToDataDefinition(DEFINITION.Traffic, "MAX G FORCE", "Gforce");
+            AddToDataDefinition(DEFINITION.Traffic, "LIGHT BEACON", "Bool", SIMCONNECT_DATATYPE.INT32);
+            AddToDataDefinition(DEFINITION.Traffic, "PLANE ALT ABOVE GROUND MINUS CG", "Feet");
+            
 
-            _simConnect?.RegisterDataDefineStruct<Traffic>(DEFINITION.Traffic);
+
+             _simConnect?.RegisterDataDefineStruct<Traffic>(DEFINITION.Traffic);
         }
 
         private void RequestAttitudeData(object? _)
@@ -224,7 +231,7 @@ namespace fs2ff.SimConnect
                     0, 0, 0);
             }
 
-            _simConnect?.RequestDataOnSimObjectType(REQUEST.TrafficAircraft, DEFINITION.Traffic, 92600, SIMCONNECT_SIMOBJECT_TYPE.AIRCRAFT);
+            _simConnect?.RequestDataOnSimObjectType(REQUEST.TrafficAircraft, DEFINITION.Traffic, 92600 * 2, SIMCONNECT_SIMOBJECT_TYPE.AIRCRAFT);
             _simConnect?.RequestDataOnSimObjectType(REQUEST.TrafficHelicopter, DEFINITION.Traffic, 92600, SIMCONNECT_SIMOBJECT_TYPE.HELICOPTER);
 
             _simConnect?.SubscribeToSystemEvent(EVENT.ObjectAdded, "ObjectAdded");
@@ -282,8 +289,8 @@ namespace fs2ff.SimConnect
                 data.dwData?.FirstOrDefault() is Traffic tfk)
             {
                 // Prevents all the parked aircraft from showing up on ADS-B
-                // Could also use Master power/Avionics state but a plane with a transponder will more likely have ADS-B
-                if (tfk.TransponderState != TranssponderState.Off)
+                // Modified to work better with VATSIM since it doesn't report Transponder state
+                if (!ViewModelLocator.Main.DataHideTrafficEnabled || !tfk.OnGround || tfk.TransponderState != TranssponderState.Off || tfk.LightBeaconOn)
                 {
                     await TrafficReceived.RaiseAsync(tfk, data.dwRequestID).ConfigureAwait(false);
                 }
