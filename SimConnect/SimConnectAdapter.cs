@@ -145,9 +145,7 @@ namespace fs2ff.SimConnect
             AddToDataDefinition(DEFINITION.Traffic, "MAX G FORCE", "Gforce");
             AddToDataDefinition(DEFINITION.Traffic, "LIGHT BEACON", "Bool", SIMCONNECT_DATATYPE.INT32);
             AddToDataDefinition(DEFINITION.Traffic, "PLANE ALT ABOVE GROUND MINUS CG", "Feet");
-            
-
-
+ 
              _simConnect?.RegisterDataDefineStruct<Traffic>(DEFINITION.Traffic);
         }
 
@@ -219,16 +217,16 @@ namespace fs2ff.SimConnect
                     SimConnectImpl.SIMCONNECT_OBJECT_ID_USER,
                     SIMCONNECT_PERIOD.SIM_FRAME,
                     SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT,
-                    0, 2, 0);
+                    0, 1, 0);
             }
             else
             {
                 _simConnect?.RequestDataOnSimObject(
                     REQUEST.Position, DEFINITION.Position,
                     SimConnectImpl.SIMCONNECT_OBJECT_ID_USER,
-                    SIMCONNECT_PERIOD.SECOND,
+                    SIMCONNECT_PERIOD.SIM_FRAME,
                     SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT,
-                    0, 0, 0);
+                    0, 1, 0);
             }
 
             _simConnect?.RequestDataOnSimObjectType(REQUEST.TrafficAircraft, DEFINITION.Traffic, 92600 * 2, SIMCONNECT_SIMOBJECT_TYPE.AIRCRAFT);
