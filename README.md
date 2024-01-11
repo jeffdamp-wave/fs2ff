@@ -15,6 +15,8 @@ Yes Any EFB that supports Stratux GDL90 protocol over ethernet/wifi
 ### Garmin Pilot
 Now supported using GDL90 and Stratux emulation. When GP added Stratux support there was no need to emulate a Stratus which required a very specific IP range to work correctly. I'll probably remove Stratus support soon
 
+Stratus emulation- This is a PITA and I don't recommend it. The PC that is running FS2FF needs to have an IP of 10.29.39.1 and the device (iPad) needs to be in that subnet 10.29.39.x otherwise GP will ignore the traffic.  I have on board wifi on my PC.  It required enabling that has a hotspot setting a static ip on that NIC to 10.29.39.1 and then a static IP on the iPad of 10.29.39.2
+
 ### Other apps (not verified by me)
 
 - FlyQ EFB (thanks, @erayymz)
