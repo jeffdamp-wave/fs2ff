@@ -230,12 +230,12 @@ namespace fs2ff {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool settings_pane_visable {
+        public bool settings_pane_visible {
             get {
-                return ((bool)(this["settings_pane_visable"]));
+                return ((bool)(this["settings_pane_visible"]));
             }
             set {
-                this["settings_pane_visable"] = value;
+                this["settings_pane_visible"] = value;
             }
         }
     }

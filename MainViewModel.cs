@@ -33,7 +33,7 @@ namespace fs2ff
         private bool _dataAttitudeEnabled = Preferences.Default.att_enabled;
         private bool _gdl90Enabled = Preferences.Default.gdl90_enabled;
         private bool _hideTrafficEnabled = Preferences.Default.hide_static_traffic_enabled;
-        private bool _settingsPanelVisable = Preferences.Default.settings_pane_visable;
+        private bool _settingsPanelVisible = Preferences.Default.settings_pane_visible;
 
         private bool _dataPositionEnabled = Preferences.Default.pos_enabled;
         private bool _dataTrafficEnabled = Preferences.Default.tfk_enabled;
@@ -322,13 +322,13 @@ namespace fs2ff
 
         public bool SettingsPaneVisible 
         {
-            get => _settingsPanelVisable;
+            get => _settingsPanelVisible;
             set
             {
-                if(value  != _settingsPanelVisable)
+                if(value  != _settingsPanelVisible)
                 {
-                    _settingsPanelVisable = value;
-                    Preferences.Default.settings_pane_visable = value;
+                    _settingsPanelVisible = value;
+                    Preferences.Default.settings_pane_visible = value;
                     Preferences.Default.Save();
                 }
             }

@@ -53,7 +53,7 @@
     <Setting Name="auto_exit" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="settings_pane_visable" Type="System.Boolean" Scope="User">
+    <Setting Name="settings_pane_visible" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
   </Settings>
