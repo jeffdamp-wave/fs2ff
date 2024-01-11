@@ -5,8 +5,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
-using System.Runtime.CompilerServices;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -31,10 +29,12 @@ namespace fs2ff
         private uint _attitudeFrequency = Preferences.Default.att_freq.AdjustToBounds(AttitudeFrequencyMin, AttitudeFrequencyMax);
         private bool _autoDetectIpEnabled = Preferences.Default.ip_detection_enabled;
         private bool _autoConnectEnabled = Preferences.Default.auto_connect_enabled;
+        private bool _autoExit  = Preferences.Default.auto_exit;
         private bool _dataAttitudeEnabled = Preferences.Default.att_enabled;
         private bool _gdl90Enabled = Preferences.Default.gdl90_enabled;
         private bool _hideTrafficEnabled = Preferences.Default.hide_static_traffic_enabled;
-        
+        private bool _settingsPanelVisable = Preferences.Default.settings_pane_visable;
+
         private bool _dataPositionEnabled = Preferences.Default.pos_enabled;
         private bool _dataTrafficEnabled = Preferences.Default.tfk_enabled;
         private bool  _dataStratusEnabled = Preferences.Default.stratus_enabled;
@@ -71,7 +71,6 @@ namespace fs2ff
             _simConnect.AttitudeReceived += SimConnectAttitudeReceived;
             _simConnect.TrafficReceived += SimConnectTrafficReceived;
             _simConnect.OwnerReceived += SimConnectOwnerReceived;
-
             _ipDetectionService = ipDetectionService;
             _ipDetectionService.NewIpDetected += IpDetectionService_NewIpDetected;
 
@@ -95,17 +94,7 @@ namespace fs2ff
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        [SuppressMessage("ReSharper", "UnusedMember.Local", Justification = "Unknown is not supposed to be used")]
-        private enum FlightSimState
-        {
-            Unknown,
-            Connected,
-            Disconnected,
-            ErrorOccurred,
-            AutoConnecting
-        }
-
-        public static string WindowTitle => $"fs2ff (GDL90) - {App.InformationalVersion}";
+        public static string WindowTitle => $"fs2ff (GDL90) - {App.AssemblyVersion}";
 
         public uint AttitudeFrequency
         {
@@ -142,6 +131,20 @@ namespace fs2ff
 
                     ManageAutoConnect();
                     UpdateVisualState();
+                }
+            }
+        }
+
+        public bool AutoExitEnabled
+        {
+            get => _autoExit;
+            set
+            {
+                if (value != _autoExit)
+                {
+                    _autoExit = value;
+                    Preferences.Default.auto_exit = value;
+                    Preferences.Default.Save();
                 }
             }
         }
@@ -317,7 +320,19 @@ namespace fs2ff
 
         public ICommand OpenSettingsCommand { get; }
 
-        public bool SettingsPaneVisible { get; set; }
+        public bool SettingsPaneVisible 
+        {
+            get => _settingsPanelVisable;
+            set
+            {
+                if(value  != _settingsPanelVisable)
+                {
+                    _settingsPanelVisable = value;
+                    Preferences.Default.settings_pane_visable = value;
+                    Preferences.Default.Save();
+                }
+            }
+        }
 
         public ActionCommand ToggleConnectCommand { get; }
 
@@ -472,9 +487,13 @@ namespace fs2ff
             }
         }
 
-        private void SimConnectStateChanged(bool failure)
+        private void SimConnectStateChanged(FlightSimState state)
         {
-            _errorOccurred = failure;
+            _errorOccurred = state.HasFlag(FlightSimState.ErrorOccurred);
+            if (state == FlightSimState.Quit && this._autoExit)
+            {
+                System.Windows.Application.Current.Shutdown();
+            }
 
             ManageAutoConnect();
             ResetDataSenderConnection();

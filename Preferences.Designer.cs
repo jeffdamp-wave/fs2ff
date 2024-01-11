@@ -214,5 +214,29 @@ namespace fs2ff {
                 this["WindowState"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool auto_exit {
+            get {
+                return ((bool)(this["auto_exit"]));
+            }
+            set {
+                this["auto_exit"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool settings_pane_visable {
+            get {
+                return ((bool)(this["settings_pane_visable"]));
+            }
+            set {
+                this["settings_pane_visable"] = value;
+            }
+        }
     }
 }

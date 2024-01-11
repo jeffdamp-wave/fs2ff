@@ -44,7 +44,7 @@ namespace fs2ff
 
         private void RestoreWindowPosition()
         {
-            //TODO: Note that Region a windows only construct.
+            //TODO: Note that Region is a windows only construct.
             var screen = new Region( new Rectangle(
                 Convert.ToInt32(SystemParameters.VirtualScreenLeft), Convert.ToInt32(SystemParameters.VirtualScreenTop),
                 Convert.ToInt32(SystemParameters.VirtualScreenWidth), Convert.ToInt32(SystemParameters.VirtualScreenHeight)));
