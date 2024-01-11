@@ -86,7 +86,7 @@
                 <CheckBox
                     IsChecked="{Binding AutoDetectIpEnabled, Mode=TwoWay}"
                     Content="Auto-detect*"
-                    ToolTip="Attempts to locate the EFB already running" />
+                    ToolTip="Attempts to locate the EFB already running (not recommended with GDL90)." />
                 <TextBox
                     ToolTip="Manually set the EFBs IP address here"
                     Text="{

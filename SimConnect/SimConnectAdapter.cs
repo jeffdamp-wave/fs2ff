@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using fs2ff.Models;
 using Microsoft.FlightSimulator.SimConnect;
 using SimConnectImpl = Microsoft.FlightSimulator.SimConnect.SimConnect;
@@ -18,6 +19,8 @@ namespace fs2ff.SimConnect
         private const string AppName = "fs2ff";
         private const uint WM_USER_SIMCONNECT = 0x0402;
         private const uint OBJECT_ID_USER_RESULT = 1;
+        private const uint AircraftRadius = 185200;
+        private const uint HeliRadius = 92600;
 
         private Timer? _attitudeTimer;
         private SimConnectImpl? _simConnect;
@@ -229,8 +232,8 @@ namespace fs2ff.SimConnect
                     0, 1, 0);
             }
 
-            _simConnect?.RequestDataOnSimObjectType(REQUEST.TrafficAircraft, DEFINITION.Traffic, 92600 * 2, SIMCONNECT_SIMOBJECT_TYPE.AIRCRAFT);
-            _simConnect?.RequestDataOnSimObjectType(REQUEST.TrafficHelicopter, DEFINITION.Traffic, 92600, SIMCONNECT_SIMOBJECT_TYPE.HELICOPTER);
+            _simConnect?.RequestDataOnSimObjectType(REQUEST.TrafficAircraft, DEFINITION.Traffic, AircraftRadius, SIMCONNECT_SIMOBJECT_TYPE.AIRCRAFT);
+            _simConnect?.RequestDataOnSimObjectType(REQUEST.TrafficHelicopter, DEFINITION.Traffic, HeliRadius, SIMCONNECT_SIMOBJECT_TYPE.HELICOPTER);
 
             _simConnect?.SubscribeToSystemEvent(EVENT.ObjectAdded, "ObjectAdded");
             _simConnect?.SubscribeToSystemEvent(EVENT.SixHz, "6Hz");
