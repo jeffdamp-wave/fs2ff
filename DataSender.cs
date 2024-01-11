@@ -20,7 +20,7 @@ namespace fs2ff
         public void Connect(IPAddress? ip)
         {
             Disconnect();
-            int port = ViewModelLocator.Main.DataGdl90Enabled ? port = Gdl90Port : FlightSimPort;
+            int port = ViewModelLocator.Main.DataGdl90Enabled ? Gdl90Port : FlightSimPort;
 
             ip ??= IPAddress.Broadcast;
 

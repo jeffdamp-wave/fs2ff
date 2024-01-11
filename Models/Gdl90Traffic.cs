@@ -21,7 +21,7 @@ namespace fs2ff.Models
             if (isOwner)
             {
                 Msg[0] = 0xA;
-                iaco = 0x00A00001;
+                iaco = 0xA4BB3C;
             }
             else
             {

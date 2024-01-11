@@ -11,8 +11,8 @@
         mc:Ignorable="d"
         Title="{Binding WindowTitle}"
         Icon="img\icon.ico"
-        Width="600" Height="505"
-        MinWidth="600" MinHeight="540"
+        Width="600" Height="530"
+        MinWidth="500" MinHeight="530"
         Closing="Window_Closing"
         Loaded="Window_Loaded"
         DataContext="{Binding Main, Source={StaticResource Locator}}">
@@ -52,7 +52,7 @@
     </Window.InputBindings>
     <ui:SplitView
         FocusManager.FocusedElement="{Binding ElementName=ConnectButton}"
-        IsPaneOpen="{Binding SettingsPaneVisible}"
+        IsPaneOpen="{Binding SettingsPaneVisible, Mode=TwoWay}"
         DisplayMode="Inline"
         OpenPaneLength="185"
         PanePlacement="Right">
@@ -76,17 +76,21 @@
             <StackPanel
                 Orientation="Vertical"
                 Margin="15,0,15,0">
-                <CheckBox Margin="0,20,0,5" 
+                <CheckBox Margin="0,2,0,0" 
                     IsChecked="{Binding AutoConnectEnabled, Mode=TwoWay}"
                     Content="Auto connect"
                     ToolTip="Automatically connects to Flight Simulator when it launches" />
+                <CheckBox Margin="0,0,0,0" 
+                    IsChecked="{Binding AutoExitEnabled, Mode=TwoWay}"
+                    Content="Auto Exit"
+                    ToolTip="Automatically close FS2FF when MSFS connection is lost" />
                 <Label
                     Content="DEVICE IP"
-                    Margin="0,20,0,5" />
+                    Margin="0,10,0,5" />
                 <CheckBox
                     IsChecked="{Binding AutoDetectIpEnabled, Mode=TwoWay}"
                     Content="Auto-detect*"
-                    ToolTip="Attempts to locate the EFB already running" />
+                    ToolTip="Attempts to locate the EFB already running (Setting IP manually is recommended)." />
                 <TextBox
                     ToolTip="Manually set the EFBs IP address here"
                     Text="{
@@ -103,7 +107,7 @@
                 </TextBox>
                 <Label
                     Content="DATA SELECTION"
-                    Margin="0,20,0,5" />
+                    Margin="0,10,0,5" />
                 <CheckBox
                     IsChecked="{Binding DataPositionEnabled, Mode=TwoWay}"
                     Content="Position"
@@ -250,7 +254,7 @@
                 Grid.RowSpan="2"
                 IsChecked="{Binding SettingsPaneVisible, Mode=TwoWay}"
                 VerticalAlignment="Stretch"
-                Width="47" HorizontalAlignment="Right">
+                Width="47">
                 <ToggleButton.ContentTemplate>
                     <DataTemplate>
                         <Label Content="S   E   T   T   I   N   G   S" Foreground="White">

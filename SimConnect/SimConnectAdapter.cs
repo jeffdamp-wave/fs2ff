@@ -1,7 +1,6 @@
 ﻿// ReSharper disable InconsistentNaming
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -18,15 +17,18 @@ namespace fs2ff.SimConnect
         private const string AppName = "fs2ff";
         private const uint WM_USER_SIMCONNECT = 0x0402;
         private const uint OBJECT_ID_USER_RESULT = 1;
+        private const uint AircraftRadius = 185200;
+        private const uint HeliRadius = 92600;
 
         private Timer? _attitudeTimer;
         private SimConnectImpl? _simConnect;
 
         public event Func<Attitude, Task>? AttitudeReceived;
         public event Func<Position, Task>? PositionReceived;
-        public event Action<bool>? StateChanged;
+        public event Action<FlightSimState>? StateChanged;
         public event Func<Traffic, uint, Task>? TrafficReceived;
         public event Func<Traffic, uint, Task>? OwnerReceived;
+        //public event Func<bool>? Quit;
 
         public bool Connected => _simConnect != null;
 
@@ -44,18 +46,18 @@ namespace fs2ff.SimConnect
 
                 SubscribeEvents();
 
-                StateChanged?.Invoke(false);
+                StateChanged?.Invoke(FlightSimState.Connected);
             }
             catch (COMException e)
             {
                 Console.Error.WriteLine("Exception caught: " + e);
-                StateChanged?.Invoke(true);
+                StateChanged?.Invoke(FlightSimState.ErrorOccurred);
             }
         }
 
-        public void Disconnect() => DisconnectInternal(false);
+        public void Disconnect() => DisconnectInternal(FlightSimState.Disconnected);
 
-        public void Dispose() => DisconnectInternal(false);
+        public void Dispose() => DisconnectInternal(FlightSimState.Disconnected);
 
         public void ReceiveMessage()
         {
@@ -66,7 +68,7 @@ namespace fs2ff.SimConnect
             catch (COMException e)
             {
                 Console.Error.WriteLine("Exception caught: " + e);
-                DisconnectInternal(true);
+                DisconnectInternal(FlightSimState.ErrorOccurred);
             }
         }
 
@@ -80,7 +82,7 @@ namespace fs2ff.SimConnect
             _simConnect?.AddToDataDefinition(defineId, datumName, unitsName, datumType, 0, SimConnectImpl.SIMCONNECT_UNUSED);
         }
 
-        private void DisconnectInternal(bool failure)
+        private void DisconnectInternal(FlightSimState state)
         {
             UnsubscribeEvents();
 
@@ -90,7 +92,7 @@ namespace fs2ff.SimConnect
             _simConnect?.Dispose();
             _simConnect = null;
 
-            StateChanged?.Invoke(failure);
+            StateChanged?.Invoke(state);
         }
 
         private void RegisterAttitudeStruct()
@@ -145,9 +147,7 @@ namespace fs2ff.SimConnect
             AddToDataDefinition(DEFINITION.Traffic, "MAX G FORCE", "Gforce");
             AddToDataDefinition(DEFINITION.Traffic, "LIGHT BEACON", "Bool", SIMCONNECT_DATATYPE.INT32);
             AddToDataDefinition(DEFINITION.Traffic, "PLANE ALT ABOVE GROUND MINUS CG", "Feet");
-            
-
-
+ 
              _simConnect?.RegisterDataDefineStruct<Traffic>(DEFINITION.Traffic);
         }
 
@@ -187,7 +187,7 @@ namespace fs2ff.SimConnect
         private void SimConnect_OnRecvException(SimConnectImpl sender, SIMCONNECT_RECV_EXCEPTION data)
         {
             Console.Error.WriteLine("Exception caught: " + data.dwException);
-            DisconnectInternal(true);
+            DisconnectInternal(FlightSimState.ErrorOccurred);
         }
 
         private void SimConnect_OnRecvOpen(SimConnectImpl sender, SIMCONNECT_RECV data)
@@ -200,7 +200,7 @@ namespace fs2ff.SimConnect
             {
                 // Sets the ownership report to run at ~10Hz.
                 // This is less taxing than pulling with ONCE
-                // SIM_FRAME = ~50hz or ~20ms (20ms * interval) so 5 * 20 == 200ms or 10Hz
+                // SIM_FRAME = ~50hz or ~20ms (20ms * interval) so 5 * 20 == 100ms or 10Hz
                 // GDL90 spec is 5hz but I find this Synthetic vision smoother at 10hz or 20hz
                 _simConnect?.RequestDataOnSimObject(
                     REQUEST.Owner, DEFINITION.Traffic,
@@ -210,29 +210,17 @@ namespace fs2ff.SimConnect
                     0, 2, 0);
             }
 
-            if (ViewModelLocator.Main.DataGdl90Enabled)
-            {
-                // Send GeoAlt at 5hz (10 * 20ms == 200ms)
-                // GDL90 specs calls for just 1hz but the EFBs I use work better at this rate
-                _simConnect?.RequestDataOnSimObject(
-                    REQUEST.Position, DEFINITION.Position,
-                    SimConnectImpl.SIMCONNECT_OBJECT_ID_USER,
-                    SIMCONNECT_PERIOD.SIM_FRAME,
-                    SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT,
-                    0, 2, 0);
-            }
-            else
-            {
-                _simConnect?.RequestDataOnSimObject(
-                    REQUEST.Position, DEFINITION.Position,
-                    SimConnectImpl.SIMCONNECT_OBJECT_ID_USER,
-                    SIMCONNECT_PERIOD.SECOND,
-                    SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT,
-                    0, 0, 0);
-            }
-
-            _simConnect?.RequestDataOnSimObjectType(REQUEST.TrafficAircraft, DEFINITION.Traffic, 92600 * 2, SIMCONNECT_SIMOBJECT_TYPE.AIRCRAFT);
-            _simConnect?.RequestDataOnSimObjectType(REQUEST.TrafficHelicopter, DEFINITION.Traffic, 92600, SIMCONNECT_SIMOBJECT_TYPE.HELICOPTER);
+            // Send GeoAlt at 5hz (10 * 20ms == 200ms)
+            // GDL90 specs calls for just 1hz but the EFBs I use work better at this rate
+            _simConnect?.RequestDataOnSimObject(
+                REQUEST.Position, DEFINITION.Position,
+                SimConnectImpl.SIMCONNECT_OBJECT_ID_USER,
+                SIMCONNECT_PERIOD.SIM_FRAME,
+                SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT,
+                0, 2, 0);
+ 
+            _simConnect?.RequestDataOnSimObjectType(REQUEST.TrafficAircraft, DEFINITION.Traffic, AircraftRadius, SIMCONNECT_SIMOBJECT_TYPE.AIRCRAFT);
+            _simConnect?.RequestDataOnSimObjectType(REQUEST.TrafficHelicopter, DEFINITION.Traffic, HeliRadius, SIMCONNECT_SIMOBJECT_TYPE.HELICOPTER);
 
             _simConnect?.SubscribeToSystemEvent(EVENT.ObjectAdded, "ObjectAdded");
             _simConnect?.SubscribeToSystemEvent(EVENT.SixHz, "6Hz");
@@ -245,7 +233,7 @@ namespace fs2ff.SimConnect
 
         private void SimConnect_OnRecvQuit(SimConnectImpl sender, SIMCONNECT_RECV data)
         {
-            DisconnectInternal(false);
+            DisconnectInternal(FlightSimState.Quit);
         }
 
         private async void SimConnect_OnRecvSimobjectData(SimConnectImpl sender, SIMCONNECT_RECV_SIMOBJECT_DATA data)
