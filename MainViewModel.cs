@@ -44,6 +44,10 @@ namespace fs2ff
         private IPAddress? _ipAddress;
         private uint _ipHintMinutesLeft = Preferences.Default.ip_hint_time;
 
+        /// <summary>
+        /// We keep a copy of the last Ownership record to use later against other traffic.
+        /// GDL90 will flag other Traffic that is near us so we need global access to this value.
+        /// </summary>
         public Traffic OwnerInfo
         {
             get
@@ -84,7 +88,7 @@ namespace fs2ff
 
             _ipHintTimer = new DispatcherTimer(TimeSpan.FromMinutes(1), DispatcherPriority.Normal, IpHintCallback, Dispatcher.CurrentDispatcher);
             _autoConnectTimer = new DispatcherTimer(TimeSpan.FromSeconds(5), DispatcherPriority.Normal, AutoConnectCallback, Dispatcher.CurrentDispatcher);
-            _stratusTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(800), DispatcherPriority.Normal, SimConnectSratusUpdate, Dispatcher.CurrentDispatcher);
+            _stratusTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(800), DispatcherPriority.Normal, SimConnectDeviceStatusUpdate, Dispatcher.CurrentDispatcher);
             _gdl90Timer = new DispatcherTimer(TimeSpan.FromMilliseconds(500), DispatcherPriority.Normal, SimConnectGdl90Update, Dispatcher.CurrentDispatcher);
 
             ManageAutoConnect();
@@ -380,6 +384,7 @@ namespace fs2ff
             _simConnect.AttitudeReceived -= SimConnectAttitudeReceived;
             _simConnect.PositionReceived -= SimConnectPositionReceived;
             _simConnect.StateChanged -= SimConnectStateChanged;
+            _simConnect.OwnerReceived -= SimConnectOwnerReceived;
             _simConnect.Dispose();
 
             _dataSender.Dispose();
@@ -519,10 +524,10 @@ namespace fs2ff
         }
 
         /// <summary>
-        /// Stratus/FF specific update messages
+        /// Send emulated device specific status messages
         /// </summary>
         /// <returns></returns>
-        private async void SimConnectSratusUpdate(object? sender, EventArgs e)
+        private async void SimConnectDeviceStatusUpdate(object? sender, EventArgs e)
         {
             if (ViewModelLocator.Main.DataStratusEnabled)
             {
@@ -543,7 +548,7 @@ namespace fs2ff
         private async Task SimConnectTrafficReceived(Traffic tfk, uint id)
         {
             // Ignore traffic with id=1, that's our own aircraft
-            if (DataTrafficEnabled && id != 1)
+            if (DataTrafficEnabled && id != SimConnectAdapter.OBJECT_ID_USER_RESULT)
             {
                 await _dataSender.Send(tfk, id).ConfigureAwait(false);
             }

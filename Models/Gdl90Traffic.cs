@@ -1,27 +1,32 @@
-﻿using System;
+﻿using fs2ff.SimConnect;
+using System;
+using System.Diagnostics;
 using System.Text;
 
 namespace fs2ff.Models
 {
     public class Gdl90Traffic : Gdl90Base
     {
+        private static uint _selfIaco = (uint)(new Random().Next(0xA00000, 0xAFFFFF));
         /// <summary>
         /// Used for both ownership report and traffic report 28 bytes
-        /// As Ownership message 5hz
-        /// As Traffic report 1hz
+        /// As Ownership message spec'ed at 5hz
+        /// As Traffic report spec'ed 1hz
         /// </summary>
         /// <param name="traffic">Traffic object to convert</param>
-        /// <param name="isOwner">true if owner otherwise false</param>
+        /// <param name="iaco">1 for owner otherwise iaco</param>
         public Gdl90Traffic(Traffic traffic, uint iaco) : base(28)
         {
-            var isOwner = iaco == 1;
+            var isOwner = iaco == SimConnectAdapter.OBJECT_ID_USER_RESULT;
+
+            // If current Traffic is not ourself then get the owner traffic for altering later
             var owner = isOwner ? traffic : ViewModelLocator.Main.OwnerInfo;
             // 0x0A (10) Ownership message
             // 0x14 (20) Standard traffic
             if (isOwner)
             {
                 Msg[0] = 0xA;
-                iaco = 0xA4BB3C;
+                iaco = _selfIaco;
             }
             else
             {
