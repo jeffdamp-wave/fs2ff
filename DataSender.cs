@@ -86,7 +86,7 @@ namespace fs2ff
 
                 var data = string.Format(CultureInfo.InvariantCulture,
                 "XGPS{0},{1:0.#####},{2:0.#####},{3:0.##},{4:0.###},{5:0.##}",
-                SimId, p.Longitude, p.Latitude, p.Altitude, p.GroundTrack, p.GroundSpeed);
+                SimId, p.Longitude, p.Latitude, p.AltitudeMeters, p.GroundTrack, p.GroundSpeedMps);
 
                 await Send(data).ConfigureAwait(false);
             }

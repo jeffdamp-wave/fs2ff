@@ -10,8 +10,9 @@ namespace fs2ff.Models
     {
         public double Latitude;
         public double Longitude;
-        public double Altitude;
+        public double AltitudeFeet;
+        public double AltitudeMeters;
         public double GroundTrack;
-        public double GroundSpeed;
+        public double GroundSpeedMps;
     }
 }

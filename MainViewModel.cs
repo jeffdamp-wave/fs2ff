@@ -112,7 +112,7 @@ namespace fs2ff
             }
         }
 
-        public static uint AttitudeFrequencyMax => 20;
+        public static uint AttitudeFrequencyMax => 50;
 
         public static uint AttitudeFrequencyMin => 5;
 
@@ -199,7 +199,11 @@ namespace fs2ff
                     this._gdl90Enabled = value;
                     Preferences.Default.gdl90_enabled = value;
                     Preferences.Default.Save();
-                    ResetDataSenderConnection();
+                    // Force a complete reconnect
+                    if (_simConnect.Connected)
+                    {
+                        this.Connect();
+                    }
                 }
             }
         }
@@ -228,6 +232,11 @@ namespace fs2ff
                     _dataStratusEnabled = value;
                     Preferences.Default.stratus_enabled = value;
                     Preferences.Default.Save();
+                    // Force a complete reconnect
+                    if (_simConnect.Connected)
+                    {
+                        this.Connect();
+                    }
                 }
             }
         }
@@ -243,6 +252,11 @@ namespace fs2ff
                     _dataStratuxEnabled = value;
                     Preferences.Default.stratux_enabled = value;
                     Preferences.Default.Save();
+                    // Force a complete reconnect
+                    if (_simConnect.Connected)
+                    {
+                        this.Connect();
+                    }
                 }
             }
         }
@@ -497,6 +511,7 @@ namespace fs2ff
             _errorOccurred = state.HasFlag(FlightSimState.ErrorOccurred);
             if (state == FlightSimState.Quit && this._autoExit)
             {
+                Preferences.Default.Save();
                 System.Windows.Application.Current.Shutdown();
             }
 
