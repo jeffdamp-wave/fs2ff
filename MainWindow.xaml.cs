@@ -1,11 +1,11 @@
 ﻿// ReSharper disable InconsistentNaming
 
+using fs2ff.SimConnect;
 using System;
 using System.ComponentModel;
 using System.Drawing;
 using System.Windows;
 using System.Windows.Interop;
-using fs2ff.SimConnect;
 
 namespace fs2ff
 {
@@ -21,14 +21,14 @@ namespace fs2ff
         private void Window_Closing(object sender, CancelEventArgs e)
         {
             this.SaveWindowPosition();
-            ((ISimConnectMessageHandler) DataContext).Dispose();
+            ((ISimConnectMessageHandler)DataContext).Dispose();
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            HwndSource hwndSource = (HwndSource) PresentationSource.FromVisual(this)!;
+            HwndSource hwndSource = (HwndSource)PresentationSource.FromVisual(this)!;
             hwndSource.AddHook(WndProc);
-            ((ISimConnectMessageHandler) DataContext).WindowHandle = hwndSource.Handle;
+            ((ISimConnectMessageHandler)DataContext).WindowHandle = hwndSource.Handle;
             this.RestoreWindowPosition();
         }
 
@@ -36,7 +36,7 @@ namespace fs2ff
         {
             if (iMsg == WM_USER_SIMCONNECT)
             {
-                ((ISimConnectMessageHandler) DataContext).ReceiveFlightSimMessage();
+                ((ISimConnectMessageHandler)DataContext).ReceiveFlightSimMessage();
             }
 
             return IntPtr.Zero;
@@ -45,7 +45,7 @@ namespace fs2ff
         private void RestoreWindowPosition()
         {
             //TODO: Note that Region is a windows only construct.
-            var screen = new Region( new Rectangle(
+            var screen = new Region(new Rectangle(
                 Convert.ToInt32(SystemParameters.VirtualScreenLeft), Convert.ToInt32(SystemParameters.VirtualScreenTop),
                 Convert.ToInt32(SystemParameters.VirtualScreenWidth), Convert.ToInt32(SystemParameters.VirtualScreenHeight)));
 
@@ -61,10 +61,10 @@ namespace fs2ff
 
         private void SaveWindowPosition()
         {
-            Preferences.Default.WindowState = (int) this.WindowState;
+            Preferences.Default.WindowState = (int)this.WindowState;
 
             Preferences.Default.Size = new System.Drawing.Size(Convert.ToInt32(this.Width), Convert.ToInt32(Height));
-            Preferences.Default.Location = new System.Drawing.Point(Convert.ToInt32((int) this.Left), Convert.ToInt32((int) this.Top));
+            Preferences.Default.Location = new System.Drawing.Point(Convert.ToInt32((int)this.Left), Convert.ToInt32((int)this.Top));
             Preferences.Default.HasSetDefaults = true;
             Preferences.Default.Save();
         }

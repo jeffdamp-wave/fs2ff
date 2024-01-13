@@ -238,5 +238,17 @@ namespace fs2ff {
                 this["settings_pane_visible"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("100")]
+        public uint traffic_radius_nautical_miles {
+            get {
+                return ((uint)(this["traffic_radius_nautical_miles"]));
+            }
+            set {
+                this["traffic_radius_nautical_miles"] = value;
+            }
+        }
     }
 }

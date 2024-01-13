@@ -1,6 +1,5 @@
 ﻿using fs2ff.SimConnect;
 using System;
-using System.Diagnostics;
 using System.Text;
 
 namespace fs2ff.Models
@@ -63,7 +62,7 @@ namespace fs2ff.Models
 
             // Range -1000 -> 101,350 feet so doesn't work with the space shuttle
             ushort alt = (ushort)((altf < -1000 || altf > 101350) ? 0x0FFF : Convert.ToUInt16(altf));
-            Msg[11] = (byte)((alt & 0xFF0) >> 4); 
+            Msg[11] = (byte)((alt & 0xFF0) >> 4);
             Msg[12] = (byte)((alt & 0x00F) << 4);
 
             Msg[12] |= 0x01;
@@ -158,7 +157,7 @@ namespace fs2ff.Models
             {
                 var c = tailBytes[i];
                 // Remove special characters See p.24, FAA ref.
-                if (c != 0x20 && !((c >= 48) && (c <= 57)) && !((c >= 65) && (c <= 90)) && c != 'e' && c != 'u' && c != 'a' && c != 'r' && c != 't') 
+                if (c != 0x20 && !((c >= 48) && (c <= 57)) && !((c >= 65) && (c <= 90)) && c != 'e' && c != 'u' && c != 'a' && c != 'r' && c != 't')
                 {
                     c = 0x20;
                 }

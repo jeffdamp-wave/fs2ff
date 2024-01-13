@@ -1,10 +1,10 @@
-﻿using System;
+﻿using fs2ff.Models;
+using System;
 using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
-using fs2ff.Models;
 
 namespace fs2ff
 {
@@ -41,7 +41,8 @@ namespace fs2ff
                 try
                 {
                     this._socket.Bind(new IPEndPoint(IPAddress.Parse("10.29.39.1"), 4001));
-                }catch(Exception ex)
+                }
+                catch (Exception ex)
                 {
                     Console.Error.WriteLine($"Unable to bind to 10.29.39.1. To emulate a Stratus you must have this IP bound to your sending NIC\r\n{ex.Message}");
                 }
@@ -131,7 +132,7 @@ namespace fs2ff
                     .ConfigureAwait(false);
             }
         }
-        
+
         public async Task Send(byte[] data)
         {
             if (_endPoint != null && _socket != null)

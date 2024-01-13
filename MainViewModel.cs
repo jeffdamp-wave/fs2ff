@@ -27,9 +27,10 @@ namespace fs2ff
         private Traffic _ownerInfo;
 
         private uint _attitudeFrequency = Preferences.Default.att_freq.AdjustToBounds(AttitudeFrequencyMin, AttitudeFrequencyMax);
+        private uint _trafficRadiusNm = Preferences.Default.traffic_radius_nautical_miles.AdjustToBounds(TrafficRadiusNmMin, TrafficRadiusNmMax);
         private bool _autoDetectIpEnabled = Preferences.Default.ip_detection_enabled;
         private bool _autoConnectEnabled = Preferences.Default.auto_connect_enabled;
-        private bool _autoExit  = Preferences.Default.auto_exit;
+        private bool _autoExit = Preferences.Default.auto_exit;
         private bool _dataAttitudeEnabled = Preferences.Default.att_enabled;
         private bool _gdl90Enabled = Preferences.Default.gdl90_enabled;
         private bool _hideTrafficEnabled = Preferences.Default.hide_static_traffic_enabled;
@@ -37,8 +38,8 @@ namespace fs2ff
 
         private bool _dataPositionEnabled = Preferences.Default.pos_enabled;
         private bool _dataTrafficEnabled = Preferences.Default.tfk_enabled;
-        private bool  _dataStratusEnabled = Preferences.Default.stratus_enabled;
-        private bool  _dataStratuxEnabled = Preferences.Default.stratux_enabled;
+        private bool _dataStratusEnabled = Preferences.Default.stratus_enabled;
+        private bool _dataStratuxEnabled = Preferences.Default.stratux_enabled;
         private bool _errorOccurred;
         private IntPtr _hwnd = IntPtr.Zero;
         private IPAddress? _ipAddress;
@@ -52,14 +53,14 @@ namespace fs2ff
         {
             get
             {
-                lock(_ownerLock)
+                lock (_ownerLock)
                 {
                     return _ownerInfo;
                 }
             }
             set
             {
-                lock(_ownerLock)
+                lock (_ownerLock)
                 {
                     _ownerInfo = value;
                 }
@@ -98,6 +99,11 @@ namespace fs2ff
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
+        public static uint AttitudeFrequencyMax => 50;
+        public static uint AttitudeFrequencyMin => 5;
+        public static uint TrafficRadiusNmMax => 100;
+        public static uint TrafficRadiusNmMin => 5;
+
         public static string WindowTitle => $"fs2ff (GDL90) - {App.AssemblyVersion}";
 
         public uint AttitudeFrequency
@@ -105,16 +111,41 @@ namespace fs2ff
             get => _attitudeFrequency;
             set
             {
-                _attitudeFrequency = value.AdjustToBounds(AttitudeFrequencyMin, AttitudeFrequencyMax);
-                _simConnect.SetAttitudeFrequency(_attitudeFrequency);
-                Preferences.Default.att_freq = value;
-                Preferences.Default.Save();
+                if (_attitudeFrequency != value)
+                {
+                    _attitudeFrequency = value.AdjustToBounds(AttitudeFrequencyMin, AttitudeFrequencyMax);
+                    Preferences.Default.att_freq = value;
+                    Preferences.Default.Save();
+                    if (_simConnect.Connected)
+                    {
+                        Connect();
+                    }
+                }
             }
         }
 
-        public static uint AttitudeFrequencyMax => 50;
-
-        public static uint AttitudeFrequencyMin => 5;
+        /// <summary>
+        /// Gets or Sets the Distance from the player aircraft to look for other Traffic in nautical miles
+        /// BUGBUG: Seem like there is an issue in the SDK where it works at 5, 10, but above 10 it seem to go to far out.
+        /// </summary>
+        public uint TrafficRadiusNm
+        {
+            get => _trafficRadiusNm;
+            set
+            {
+                if (value != _trafficRadiusNm)
+                {
+                    _trafficRadiusNm = value.AdjustToBounds(TrafficRadiusNmMin, TrafficRadiusNmMax);
+                    Preferences.Default.traffic_radius_nautical_miles = value;
+                    Preferences.Default.Save();
+                    // Requires connection Reset
+                    if (_simConnect.Connected)
+                    {
+                        Connect();
+                    }
+                }
+            }
+        }
 
         public bool AutoConnectEnabled
         {
@@ -221,7 +252,7 @@ namespace fs2ff
                 }
             }
         }
-        
+
         public bool DataStratusEnabled
         {
             get => _dataStratusEnabled;
@@ -260,7 +291,7 @@ namespace fs2ff
                 }
             }
         }
-        
+
         public bool DataPositionEnabled
         {
             get => _dataPositionEnabled;
@@ -338,12 +369,12 @@ namespace fs2ff
 
         public ICommand OpenSettingsCommand { get; }
 
-        public bool SettingsPaneVisible 
+        public bool SettingsPaneVisible
         {
             get => _settingsPanelVisible;
             set
             {
-                if(value  != _settingsPanelVisible)
+                if (value != _settingsPanelVisible)
                 {
                     _settingsPanelVisible = value;
                     Preferences.Default.settings_pane_visible = value;
@@ -415,7 +446,7 @@ namespace fs2ff
             UpdateChecker.Check().ContinueWith(task => UpdateInfo = task.Result, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
-        private void Connect() => _simConnect.Connect(WindowHandle, AttitudeFrequency);
+        private void Connect() => _simConnect.Connect(WindowHandle);
 
         private void Disconnect() => _simConnect.Disconnect();
 
@@ -502,7 +533,7 @@ namespace fs2ff
         {
             if (DataPositionEnabled && (pos.Latitude != 0d || pos.Longitude != 0d))
             {
-                    await _dataSender.Send(pos).ConfigureAwait(false);
+                await _dataSender.Send(pos).ConfigureAwait(false);
             }
         }
 
@@ -578,7 +609,7 @@ namespace fs2ff
         private void ToggleConnect()
         {
             if (_simConnect.Connected) Disconnect();
-            else                          Connect();
+            else Connect();
         }
 
         private void ToggleSettingsPane() => SettingsPaneVisible = !SettingsPaneVisible;

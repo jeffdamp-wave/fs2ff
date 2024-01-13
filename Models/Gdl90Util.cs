@@ -34,7 +34,7 @@ namespace fs2ff.Models
             var result = dividend / inverse;
             return result;
         }
-        
+
         /// <summary>
         /// Converts the double from meters per second to knots
         /// </summary>
@@ -83,7 +83,7 @@ namespace fs2ff.Models
         public static ushort ComputeCrc(IEnumerable<byte> data)
         {
             ushort ret = 0;
-            foreach(var d in data)
+            foreach (var d in data)
             {
                 ret = (ushort)(Crc16Table[ret >> 8] ^ (ret << 8) ^ (d));
             }

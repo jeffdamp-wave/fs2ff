@@ -23,7 +23,7 @@ namespace fs2ff.Models
             var yaw = Convert.ToInt16(att.TurnRate * 10);
             var g = Convert.ToInt16((att.GForce * 10).AdjustToBounds(short.MinValue + 1, short.MaxValue - 1));
 
-            var palt = Convert.ToInt32(att.PressureAlt.AdjustToBounds(short.MinValue + 1, short.MaxValue -1));
+            var palt = Convert.ToInt32(att.PressureAlt.AdjustToBounds(short.MinValue + 1, short.MaxValue - 1));
             var ias = Convert.ToInt16(att.AirspeedIndicated.AdjustToBounds(short.MinValue + 1, short.MaxValue - 1));
             var vs = Convert.ToInt16(att.VertSpeed.AdjustToBounds(short.MinValue + 1, short.MaxValue - 1));
 

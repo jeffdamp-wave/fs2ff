@@ -11,8 +11,8 @@
         mc:Ignorable="d"
         Title="{Binding WindowTitle}"
         Icon="img\icon.ico"
-        Width="600" Height="530"
-        MinWidth="500" MinHeight="530"
+        Width="600" Height="600"
+        MinWidth="500" MinHeight="600"
         Closing="Window_Closing"
         Loaded="Window_Loaded"
         DataContext="{Binding Main, Source={StaticResource Locator}}">
@@ -138,7 +138,7 @@
                     ToolTip="Emulate Stratux Works with FF and Garmin Pilot ver 10.7.1+ just needs to be on the same subnet as the iPad"/>
                 <Label
                     Content="{Binding Value, ElementName=Slider, Converter={c:FormatStringConverter}, ConverterParameter='ATTITUDE FREQ: {0} Hz'}"
-                    Margin="0,14,0,5" />
+                    Margin="0,10,0,1" />
                 <Slider
                     Name="Slider"
                     IsEnabled="{Binding DataAttitudeEnabled}"
@@ -147,9 +147,23 @@
                     Maximum="{Binding AttitudeFrequencyMax, Converter={c:UIntToDoubleConverter}}"
                     TickFrequency="5"
                     Focusable="False"
-                    TickPlacement="Both"
+                    TickPlacement="BottomRight"
                     IsSnapToTickEnabled="True"
                     ToolTip="Adjusts the update rate of sending AHARS data to the EFB"/>
+                <Label 
+                    Content="{Binding Value, ElementName=RadiusSlider, Converter={c:FormatStringConverter}, ConverterParameter='Traffic Radius: {0} NM'}"
+                    Margin="0, 5, 0, 1" />
+                <Slider
+                    Name="RadiusSlider"
+                    IsEnabled="{Binding DataTrafficEnabled}"
+                    Value="{Binding TrafficRadiusNm, Mode=TwoWay, Delay=1000, Converter={c:UIntToDoubleConverter}}"
+                    Maximum="{Binding TrafficRadiusNmMax, Converter={c:UIntToDoubleConverter}}"
+                    Minimum="{Binding TrafficRadiusNmMin, Converter={c:UIntToDoubleConverter}}"
+                    TickFrequency="5"
+                    Focusable="False"
+                    TickPlacement="BottomRight"
+                    IsSnapToTickEnabled="True"
+                    ToolTip="Adjust the Detectable Traffic bubble around the player aircraft"/>
             </StackPanel>
         </ui:SplitView.Pane>
         <Grid>

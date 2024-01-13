@@ -1,9 +1,9 @@
-﻿using System;
-using GeoidHeightsDotNet;
+﻿using GeoidHeightsDotNet;
+using System;
 
 namespace fs2ff.Models
 {
-    public class Gdl90GeoAltitude :Gdl90Base
+    public class Gdl90GeoAltitude : Gdl90Base
     {
         /// <summary>
         /// GDL-90 Ownership Geometric Altitude (1Hz) 5 bytes.

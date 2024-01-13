@@ -1,6 +1,6 @@
+using Microsoft.Xaml.Behaviors;
 using System.Windows;
 using System.Windows.Input;
-using Microsoft.Xaml.Behaviors;
 
 namespace fs2ff.Behaviors
 {

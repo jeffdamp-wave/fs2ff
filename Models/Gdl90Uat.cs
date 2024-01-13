@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading;
 
 namespace fs2ff.Models
 {
@@ -15,12 +14,12 @@ namespace fs2ff.Models
         /// </summary>
         /// <param name="id"></param>
         /// <param name="msg"></param>
-        public Gdl90Uat(RelayMsgType id, byte[] msg) : base (msg.Length + 4)
+        public Gdl90Uat(RelayMsgType id, byte[] msg) : base(msg.Length + 4)
         {
             Msg[0] = (byte)id;
-            
+
             // TODO MSG 1-3 is some sort of time value
-            
+
             Array.Copy(msg, 0, Msg, 4, msg.Length);
         }
 

@@ -68,7 +68,7 @@ namespace fs2ff
         public void Execute(object? parameter)
         {
             if (parameter is T param) _action(param);
-            else                      _action(null);
+            else _action(null);
         }
 
         public void TriggerCanExecuteChanged() => CanExecuteChanged?.Invoke(this, new EventArgs());

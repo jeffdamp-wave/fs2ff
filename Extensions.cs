@@ -24,7 +24,7 @@ namespace fs2ff
 
             for (var i = 0; i < delegates.Length; i++)
             {
-                tasks[i] = ((Func<T, Task>) delegates[i])(value);
+                tasks[i] = ((Func<T, Task>)delegates[i])(value);
             }
 
             await Task.WhenAll(tasks);
@@ -42,7 +42,7 @@ namespace fs2ff
 
             for (var i = 0; i < delegates.Length; i++)
             {
-                tasks[i] = ((Func<T1, T2, Task>) delegates[i])(value1, value2);
+                tasks[i] = ((Func<T1, T2, Task>)delegates[i])(value1, value2);
             }
 
             await Task.WhenAll(tasks);

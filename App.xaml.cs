@@ -1,9 +1,9 @@
-﻿using System;
-using System.Reflection;
-using System.Windows;
-using fs2ff.SimConnect;
+﻿using fs2ff.SimConnect;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System;
+using System.Reflection;
+using System.Windows;
 
 namespace fs2ff
 {

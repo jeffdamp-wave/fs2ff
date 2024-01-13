@@ -10,7 +10,7 @@ namespace fs2ff.Models
         {
             Msg[0] = 0xCC; // Message type "Stratux".
             Msg[1] = 0;
-            
+
             if (ViewModelLocator.Main.DataPositionEnabled)
             {
                 Msg[1] = 0x02;

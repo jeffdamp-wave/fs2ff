@@ -33,7 +33,7 @@ namespace fs2ff.Models
         public double AirspeedIndicated;
         public double AirspeedTrue;
         public uint TransponderCode;
-        public TranssponderState TransponderState;
+        public TransponderState TransponderState;
 
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
         public string AtcModel;
@@ -88,7 +88,7 @@ namespace fs2ff.Models
         }
     }
 
-    public enum TranssponderState :int
+    public enum TransponderState : int
     {
         Off,
         Standby,

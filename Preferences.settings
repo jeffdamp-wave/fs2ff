@@ -56,5 +56,8 @@
     <Setting Name="settings_pane_visible" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
+    <Setting Name="traffic_radius_nautical_miles" Type="System.UInt32" Scope="User">
+      <Value Profile="(Default)">100</Value>
+    </Setting>
   </Settings>
 </SettingsFile>
