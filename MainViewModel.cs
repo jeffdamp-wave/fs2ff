@@ -91,6 +91,8 @@ namespace fs2ff
             _autoConnectTimer = new DispatcherTimer(TimeSpan.FromSeconds(5), DispatcherPriority.Normal, AutoConnectCallback, Dispatcher.CurrentDispatcher);
             _stratusTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(800), DispatcherPriority.Normal, SimConnectDeviceStatusUpdate, Dispatcher.CurrentDispatcher);
             _gdl90Timer = new DispatcherTimer(TimeSpan.FromMilliseconds(500), DispatcherPriority.Normal, SimConnectGdl90Update, Dispatcher.CurrentDispatcher);
+            _ownerInfo = new Traffic(new TrafficData(), 1);
+            _ownerInfo.LastUpdate = DateTime.MinValue;
 
             ManageAutoConnect();
             CheckForUpdates();
@@ -272,7 +274,6 @@ namespace fs2ff
             }
         }
 
-
         public bool DataStratuxEnabled
         {
             get => _dataStratuxEnabled;
@@ -348,20 +349,6 @@ namespace fs2ff
                 }
             }
         }
-
-
-        //private bool SetProperty<T>(ref T field, T newValue, [CallerMemberName] string propertyName = null)
-        //{
-        //    if (!Equals(field, newValue))
-        //    {
-        //        field = newValue;
-        //        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        //        return true;
-        //    }
-
-        //    return false;
-        //}
-
 
         public bool IpHintVisible => IpAddress == null && IpHintMinutesLeft == 0;
 
@@ -529,14 +516,6 @@ namespace fs2ff
             }
         }
 
-        private async Task SimConnectPositionReceived(Position pos)
-        {
-            if (DataPositionEnabled && (pos.Latitude != 0d || pos.Longitude != 0d))
-            {
-                await _dataSender.Send(pos).ConfigureAwait(false);
-            }
-        }
-
         private void SimConnectStateChanged(FlightSimState state)
         {
             _errorOccurred = state.HasFlag(FlightSimState.ErrorOccurred);
@@ -557,6 +536,11 @@ namespace fs2ff
         /// <returns></returns>
         private async void SimConnectGdl90Update(object? sender, EventArgs e)
         {
+            if (!DataGdl90Enabled)
+            {
+                return;
+            }
+
             var hb = new Gdl90Heartbeat();
             var data = hb.ToGdl90Message();
             await _dataSender.Send(data).ConfigureAwait(false);
@@ -575,6 +559,11 @@ namespace fs2ff
         /// <returns></returns>
         private async void SimConnectDeviceStatusUpdate(object? sender, EventArgs e)
         {
+            if (!DataGdl90Enabled)
+            {
+                return;
+            }
+
             if (ViewModelLocator.Main.DataStratusEnabled)
             {
                 var status = new Gdl90StratusStatus();
@@ -591,19 +580,45 @@ namespace fs2ff
             await _dataSender.Send(ffmId.ToGdl90Message()).ConfigureAwait(false);
         }
 
+        private async Task SimConnectPositionReceived(Position pos)
+        {
+            if (DataPositionEnabled && pos.IsValid())
+            {
+                await _dataSender.Send(pos).ConfigureAwait(false);
+            }
+        }
+
         private async Task SimConnectTrafficReceived(Traffic tfk, uint id)
         {
             // Ignore traffic with id=1, that's our own aircraft
             if (DataTrafficEnabled && id != SimConnectAdapter.OBJECT_ID_USER_RESULT)
             {
-                await _dataSender.Send(tfk, id).ConfigureAwait(false);
+                bool send = true;
+                if (OwnerInfo.IsValid())
+                {
+                    // MSFS Traffic Request bubble isn't so good. It will either do < 10nm or <60nm doesn't seem to do any less than that.
+                    var curRadius = TrafficRadiusNm.NmToMeters();
+                    var distance = OwnerInfo.Td.DistanceMeters(tfk.Td);
+                    if (Convert.ToUInt32(distance.Horizontal) > curRadius)
+                    {
+                        send = false;
+                    }
+                }
+
+                if (send)
+                {
+                    await _dataSender.Send(tfk, id).ConfigureAwait(false);
+                }
             }
         }
 
         private async Task SimConnectOwnerReceived(Traffic tfk, uint id)
         {
             OwnerInfo = tfk;
-            await _dataSender.Send(tfk, id).ConfigureAwait(false);
+            if (DataGdl90Enabled)
+            {
+                await _dataSender.Send(tfk, id).ConfigureAwait(false);
+            }
         }
 
         private void ToggleConnect()

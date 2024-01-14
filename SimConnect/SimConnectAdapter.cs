@@ -116,23 +116,28 @@ namespace fs2ff.SimConnect
             var rate = (1000 / frequency) / SimFrameLatencyMs;
             rate = rate.AdjustToBounds<uint>(1, 1000);
             uint posRate;
+            uint ownerRate;
 
             if (ViewModelLocator.Main.DataGdl90Enabled)
             {
-                // Required for GDL90. Owner report tightly tide to Attitude in GP Position not so much
-                _simConnect?.RequestDataOnSimObject(
-                    REQUEST.Owner, DEFINITION.Traffic,
-                    SimConnectImpl.SIMCONNECT_OBJECT_ID_USER,
-                    SIMCONNECT_PERIOD.SIM_FRAME,
-                    SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT,
-                    0, rate, 0);
                 posRate = (rate * 2).AdjustToBounds<uint>(5, 50);
+                ownerRate = posRate;
             }
             else
             {
                 // For XTRAFFIC position is very closely coupled.
                 posRate = rate;
+                // Use this in XTRAFFIC to to store our owner location
+                ownerRate = 20;
             }
+
+            // Required for GDL90. Owner report tightly tide to Attitude in GP Position not so much
+            _simConnect?.RequestDataOnSimObject(
+                REQUEST.Owner, DEFINITION.Traffic,
+                SimConnectImpl.SIMCONNECT_OBJECT_ID_USER,
+                SIMCONNECT_PERIOD.SIM_FRAME,
+                SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT,
+                0, ownerRate, 0);
 
             // GDL90 specs calls for just 1hz but the EFBs I use work better at this rate
             _simConnect?.RequestDataOnSimObject(
@@ -192,7 +197,7 @@ namespace fs2ff.SimConnect
             AddToDataDefinition(DEFINITION.Position, "GPS GROUND TRUE TRACK", "Degrees");
             AddToDataDefinition(DEFINITION.Position, "GPS GROUND SPEED", "Meters per second");
 
-            _simConnect?.RegisterDataDefineStruct<Position>(DEFINITION.Position);
+            _simConnect?.RegisterDataDefineStruct<PositionData>(DEFINITION.Position);
         }
 
         private void RegisterTrafficStruct()
@@ -221,7 +226,7 @@ namespace fs2ff.SimConnect
             AddToDataDefinition(DEFINITION.Traffic, "LIGHT BEACON", "Bool", SIMCONNECT_DATATYPE.INT32);
             AddToDataDefinition(DEFINITION.Traffic, "PLANE ALT ABOVE GROUND MINUS CG", "Feet");
 
-            _simConnect?.RegisterDataDefineStruct<Traffic>(DEFINITION.Traffic);
+            _simConnect?.RegisterDataDefineStruct<TrafficData>(DEFINITION.Traffic);
         }
 
 
@@ -288,8 +293,9 @@ namespace fs2ff.SimConnect
 
             if (data.dwRequestID == (uint)REQUEST.Position &&
                 data.dwDefineID == (uint)DEFINITION.Position &&
-                data.dwData?.FirstOrDefault() is Position pos)
+                data.dwData?.FirstOrDefault() is PositionData pd)
             {
+                var pos = new Position(pd, dwObjectID);
                 await PositionReceived.RaiseAsync(pos).ConfigureAwait(false);
                 return;
             }
@@ -307,9 +313,9 @@ namespace fs2ff.SimConnect
             {
                 if ((dwObjectID == OBJECT_ID_USER_RESULT
                 || dwObjectID == SimConnectImpl.SIMCONNECT_OBJECT_ID_USER) &&
-                data.dwData?.FirstOrDefault() is Traffic owner)
+                data.dwData?.FirstOrDefault() is TrafficData od)
                 {
-                    await OwnerReceived.RaiseAsync(owner, OBJECT_ID_USER_RESULT).ConfigureAwait(false);
+                    await OwnerReceived.RaiseAsync(new Traffic(od, Gdl90Traffic.SelfIaco), OBJECT_ID_USER_RESULT).ConfigureAwait(false);
                     return;
                 }
 
@@ -321,15 +327,15 @@ namespace fs2ff.SimConnect
                 data.dwDefineID == (uint)DEFINITION.Traffic &&
                 dwObjectID != OBJECT_ID_USER_RESULT &&
                 dwObjectID != SimConnectImpl.SIMCONNECT_OBJECT_ID_USER &&
-                data.dwData?.FirstOrDefault() is Traffic tfk)
+                data.dwData?.FirstOrDefault() is TrafficData td)
             {
                 // Prevents all the parked aircraft from showing up on ADS-B
                 // Modified to work better with VATSIM since it doesn't report Transponder state
-                if (!ViewModelLocator.Main.DataHideTrafficEnabled || !tfk.OnGround || tfk.TransponderState != TransponderState.Off || tfk.LightBeaconOn)
+                if (!ViewModelLocator.Main.DataHideTrafficEnabled || !td.OnGround || td.TransponderState != TransponderState.Off || td.LightBeaconOn)
                 {
                     try
                     {
-                        await TrafficReceived.RaiseAsync(tfk, data.dwRequestID).ConfigureAwait(false);
+                        await TrafficReceived.RaiseAsync(new Traffic(td, dwObjectID), data.dwRequestID).ConfigureAwait(false);
                     }
                     catch (Exception ex)
                     {

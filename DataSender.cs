@@ -87,7 +87,7 @@ namespace fs2ff
 
                 var data = string.Format(CultureInfo.InvariantCulture,
                 "XGPS{0},{1:0.#####},{2:0.#####},{3:0.##},{4:0.###},{5:0.##}",
-                SimId, p.Longitude, p.Latitude, p.AltitudeMeters, p.GroundTrack, p.GroundSpeedMps);
+                SimId, p.Pd.Longitude, p.Pd.Latitude, p.Pd.AltitudeMeters, p.Pd.GroundTrack, p.Pd.GroundSpeedMps);
 
                 await Send(data).ConfigureAwait(false);
             }
@@ -116,8 +116,8 @@ namespace fs2ff
             {
                 var data = string.Format(CultureInfo.InvariantCulture,
                     "XTRAFFIC{0},{1},{2:0.#####},{3:0.#####},{4:0.#},{5:0.#},{6},{7:0.###},{8:0.#},{9}",
-                    SimId, id, t.Latitude, t.Longitude, t.Altitude, t.VerticalSpeed, t.OnGround ? 0 : 1,
-                    t.TrueHeading, t.GroundVelocity, TryGetFlightNumber(t) ?? t.TailNumber);
+                    SimId, t.Iaco, t.Td.Latitude, t.Td.Longitude, t.Td.Altitude, t.Td.VerticalSpeed, t.Td.OnGround ? 0 : 1,
+                    t.Td.TrueHeading, t.Td.GroundVelocity, TryGetFlightNumber(t) ?? t.Td.TailNumber);
 
                 await Send(data).ConfigureAwait(false);
             }
@@ -144,8 +144,8 @@ namespace fs2ff
         }
 
         private static string? TryGetFlightNumber(Traffic t) =>
-            !string.IsNullOrEmpty(t.Airline) && !string.IsNullOrEmpty(t.FlightNumber)
-                ? $"{t.Airline} {t.FlightNumber}"
+            !string.IsNullOrEmpty(t.Td.Airline) && !string.IsNullOrEmpty(t.Td.FlightNumber)
+                ? $"{t.Td.Airline} {t.Td.FlightNumber}"
                 : null;
     }
 }

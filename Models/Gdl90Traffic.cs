@@ -6,26 +6,27 @@ namespace fs2ff.Models
 {
     public class Gdl90Traffic : Gdl90Base
     {
-        private static uint _selfIaco = (uint)(new Random().Next(0xA00000, 0xAFFFFF));
+        public static uint SelfIaco = (uint)(new Random().Next(0xA00000, 0xAFFFFF));
         /// <summary>
-        /// Used for both ownership report and traffic report 28 bytes
+        /// Used for both ownership report and td report 28 bytes
         /// As Ownership message spec'ed at 5hz
         /// As Traffic report spec'ed 1hz
         /// </summary>
-        /// <param name="traffic">Traffic object to convert</param>
+        /// <param name="td">Traffic object to convert</param>
         /// <param name="iaco">1 for owner otherwise iaco</param>
         public Gdl90Traffic(Traffic traffic, uint iaco) : base(28)
         {
+            var td = traffic.Td;
             var isOwner = iaco == SimConnectAdapter.OBJECT_ID_USER_RESULT;
 
-            // If current Traffic is not ourself then get the owner traffic for altering later
+            // If current Traffic is not ourself then get the owner td for altering later
             var owner = isOwner ? traffic : ViewModelLocator.Main.OwnerInfo;
             // 0x0A (10) Ownership message
-            // 0x14 (20) Standard traffic
+            // 0x14 (20) Standard td
             if (isOwner)
             {
                 Msg[0] = 0xA;
-                iaco = _selfIaco;
+                iaco = SelfIaco;
             }
             else
             {
@@ -50,15 +51,15 @@ namespace fs2ff.Models
             }
 
             // Convert double lat to 3 bytes
-            var tmp = traffic.Latitude.MakeLatLng();
+            var tmp = td.Latitude.MakeLatLng();
             Array.Copy(tmp, 0, Msg, 5, tmp.Length);
 
             // Convert double longitude to 3 bytes
-            tmp = traffic.Longitude.MakeLatLng();
+            tmp = td.Longitude.MakeLatLng();
             Array.Copy(tmp, 0, Msg, 8, tmp.Length);
 
             // Altitude. LSB = 25ft starting at -1000 (0x00)
-            var altf = (traffic.Altitude + 1000) / 25;
+            var altf = (td.Altitude + 1000) / 25;
 
             // Range -1000 -> 101,350 feet so doesn't work with the space shuttle
             ushort alt = (ushort)((altf < -1000 || altf > 101350) ? 0x0FFF : Convert.ToUInt16(altf));
@@ -69,7 +70,7 @@ namespace fs2ff.Models
 
             // MSFS has a desire to show stationary planes on not on ground
             // VATSIM likes to have some jitter and not put the plane on the ground
-            if (!traffic.OnGround && traffic.AltAboveGroundCG > 10 && (traffic.GroundVelocity != 0 || traffic.VerticalSpeed != 0))
+            if (!td.OnGround && td.AltAboveGroundCG > 10 && (td.GroundVelocity != 0 || td.VerticalSpeed != 0))
             {
                 Msg[12] = (byte)(Msg[12] | 1 << 3);
 
@@ -85,55 +86,55 @@ namespace fs2ff.Models
             Msg[13] = 0xB0 | (0x0B & 0x0F);
 
             // Ground speed 12 bits LSB = 1kts
-            var knots = Convert.ToUInt16(traffic.GroundVelocity);
+            var knots = Convert.ToUInt16(td.GroundVelocity);
             Msg[14] = (byte)((knots & 0x0FF0) >> 4);
             Msg[15] = (byte)((knots & 0x000F) << 4);
 
             // Vertical Speed 12 bits LSB = 64ft/m
-            var verticalVelocity = Convert.ToInt16(traffic.VerticalSpeed.RoundBy(64) / 64);
+            var verticalVelocity = Convert.ToInt16(td.VerticalSpeed.RoundBy(64) / 64);
             Msg[15] |= (byte)((verticalVelocity & 0x0F00) >> 8);
             Msg[16] = (byte)(verticalVelocity & 0x00FF);
 
             // Truncate Heading to 359 to not overflow the convert below
-            var trk = Math.Min(traffic.TrueHeading, 359);
+            var trk = Math.Min(td.TrueHeading, 359);
             // Heading is 360/256 to fit into 1 byte
             trk /= Gdl90Util.TRACK_RESOLUTION;
             Msg[17] = Convert.ToByte(trk);
 
-            if (traffic.MaxMach > 5)
+            if (td.MaxMach > 5)
             {
                 // Space or trans-atmospheric vehicle (Dark Star)
                 Msg[18] = 15;
             }
-            else if (traffic.MaxMach > 1.1 || traffic.MaxGforceSeen > 5)
+            else if (td.MaxMach > 1.1 || td.MaxGforceSeen > 5)
             {
                 // Highly Maneuverable > 5G acceleration and high speed (F18 and other High G aircraft)
                 Msg[18] = 6;
             }
-            else if (traffic.Category == "Helicopter")
+            else if (td.Category == "Helicopter")
             {
                 Msg[18] = 0x7;
             }
-            else if (traffic.Category == "Airplane")
+            else if (td.Category == "Airplane")
             {
-                if (traffic.MaxGrossWeight < 15500)
+                if (td.MaxGrossWeight < 15500)
                 {
                     // Light
                     Msg[18] = 1;
                 }
-                else if (traffic.MaxGrossWeight < 75000)
+                else if (td.MaxGrossWeight < 75000)
                 {
                     // Small
                     Msg[18] = 2;
                 }
-                else if (traffic.MaxGrossWeight < 300000)
+                else if (td.MaxGrossWeight < 300000)
                 {
-                    // Large
+                    // Large (B737,B777, A350, etc.)
                     Msg[18] = 3;
                 }
                 else
                 {
-                    // Heavy (B747)
+                    // Heavy (B747,A380)
                     Msg[18] = 5;
                 }
 
@@ -146,9 +147,9 @@ namespace fs2ff.Models
             }
 
             var tail = "None";
-            if (!string.IsNullOrEmpty(traffic.TailNumber))
+            if (!string.IsNullOrEmpty(td.TailNumber))
             {
-                tail = traffic.TailNumber.Trim();
+                tail = td.TailNumber.Trim();
             }
 
             // Max length 8 bytes
@@ -165,16 +166,14 @@ namespace fs2ff.Models
                 Msg[19 + i] = c;
             }
 
-            //// if (!isOwner) traffic.TransponderCode = 7700;
-
             // Priority status 0-6, 0 is normal
             // I haven't found an EFB that uses this
-            switch (traffic.TransponderCode)
+            switch (td.TransponderCode)
             {
                 // Emergency
                 case 7700:
                     Msg[27] = 1 << 4;
-                    // TODO: Decide if I want to set alert on traffic in these cases
+                    // TODO: Decide if I want to set alert on td in these cases
                     Msg[0] |= 0x10;
                     break;
                 // Lost communication
