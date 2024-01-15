@@ -3,6 +3,9 @@
 
 namespace fs2ff.SimConnect
 {
+    /// <summary>
+    /// Values passed into SimConnect
+    /// </summary>
     public enum DEFINITION : uint
     {
         Undefined,

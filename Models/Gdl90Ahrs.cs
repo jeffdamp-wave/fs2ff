@@ -15,11 +15,12 @@ namespace fs2ff.Models
             Msg[2] = 0x01;
             Msg[3] = 0x01;
 
+            // The following values have been adjusted for GP SV to match the MSFS 172 Skyhawk G1000
             // All of the following have an LSB = 0.1
             var pitch = Convert.ToInt16(att.Pitch * -10); // MSFS reverses the values
             var roll = Convert.ToInt16(att.Bank * -10); // MSFS reverses the values
             var hdg = Convert.ToInt16(att.TrueHeading * 10);
-            var slipSkid = Convert.ToInt16(att.SkidSlip * 10);
+            var slipSkid = Convert.ToInt16(att.SkidSlip * 2.8);  // * 10 was to high in SU 14 adjusted down
             var yaw = Convert.ToInt16(att.TurnRate * 10);
             var g = Convert.ToInt16((att.GForce * 10).AdjustToBounds(short.MinValue + 1, short.MaxValue - 1));
 

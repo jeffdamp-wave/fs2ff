@@ -4,6 +4,9 @@ using System.Threading.Tasks;
 
 namespace fs2ff
 {
+    /// <summary>
+    /// Pulls GitHub looking for new releases
+    /// </summary>
     public static class UpdateChecker
     {
         private const string urlCheck = "https://github.com/jeffdamp-wave/fs2ff/releases/latest";

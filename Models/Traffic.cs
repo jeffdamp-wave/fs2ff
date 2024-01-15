@@ -5,6 +5,9 @@ using System.Runtime.InteropServices;
 
 namespace fs2ff.Models
 {
+    /// <summary>
+    /// Wraps the TrafficData for extensibility (future work)
+    /// </summary>
     public class Traffic
     {
         public TrafficData Td { get; set; }
@@ -25,6 +28,9 @@ namespace fs2ff.Models
         }
     }
 
+    /// <summary>
+    /// Traffic structure passed into SimConnect
+    /// </summary>
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
     public struct TrafficData
     {
@@ -62,14 +68,11 @@ namespace fs2ff.Models
         public double MaxGforceSeen;
         public bool LightBeaconOn;
         public double AltAboveGroundCG;
-
-
-        //// Below are added values not from SimConnect
-        //public DateTime LastUpdate;
-
     }
 
-
+    /// <summary>
+    /// Traffic helper methods
+    /// </summary>
     public static class TrafficExtensions
     {
         public const uint MinDistanceNm = 4;
@@ -77,12 +80,22 @@ namespace fs2ff.Models
         public const double ValidSecond = 30;
         private const double _radiusEarth = 6371008.8;
 
+        /// <summary>
+        /// Is the traffic data valid
+        /// </summary>
+        /// <param name="t"></param>
+        /// <returns></returns>
         public static bool IsValid(this Traffic t)
         {
             var span = DateTime.UtcNow - t.LastUpdate;
             return t.Td.Latitude != 0 && t.Td.Longitude != 0 &&  span.TotalSeconds < ValidSecond;
         }
 
+        /// <summary>
+        /// Converts the provide angle to a radian
+        /// </summary>
+        /// <param name="angle"></param>
+        /// <returns></returns>
         public static double ToRadians(this double angle)
         {
             return angle * Math.PI / 180;
@@ -128,6 +141,9 @@ namespace fs2ff.Models
         }
     }
 
+    /// <summary>
+    /// SimConnect Transponder state info.
+    /// </summary>
     public enum TransponderState : int
     {
         Off,

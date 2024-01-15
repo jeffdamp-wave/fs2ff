@@ -8,6 +8,9 @@ using System.Threading.Tasks;
 
 namespace fs2ff
 {
+    /// <summary>
+    /// Transmits the data over ethernet to the EFB
+    /// </summary>
     public class DataSender : IDisposable
     {
         private const int FlightSimPort = 49002;
@@ -17,6 +20,10 @@ namespace fs2ff
         private IPEndPoint? _endPoint;
         private Socket? _socket;
 
+        /// <summary>
+        /// Binds to a socket for transmission
+        /// </summary>
+        /// <param name="ip"></param>
         public void Connect(IPAddress? ip)
         {
             Disconnect();
@@ -29,43 +36,31 @@ namespace fs2ff
             {
                 EnableBroadcast = ip.Equals(IPAddress.Broadcast),
             };
-
-            // TODO: Make this a separate option for Stratus 3 emulation
-            // To get Garmin Pilot to work with GDL90 Stratus, The Host PC must have an IP of 10.29.39.1 and
-            // The Client needs to be in the same subnet otherwise GP will ICMP DU it. If your PC has a WiFi adapter
-            // Setup like this: 1. Enable WiFi Hot Spot 2. Add Static IP of 10.29.39.1 to the WiFi adapter
-            // 3. Connect device (iPad) to the Hot spot then switch from dynamic IP to Static with IP 10.29.39.x
-            // 4. Make 10.29.39.1 the default gateway and use standard DNS like 1.1.1.1
-            if (ViewModelLocator.Main.DataGdl90Enabled && ViewModelLocator.Main.DataStratusEnabled)
-            {
-                try
-                {
-                    this._socket.Bind(new IPEndPoint(IPAddress.Parse("10.29.39.1"), 4001));
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine($"Unable to bind to 10.29.39.1. To emulate a Stratus you must have this IP bound to your sending NIC\r\n{ex.Message}");
-                }
-            }
         }
 
         public void Disconnect() => _socket?.Dispose();
 
         public void Dispose() => _socket?.Dispose();
 
+        /// <summary>
+        /// Converts and sends an Attitude update packet
+        /// </summary>
+        /// <param name="a"></param>
+        /// <returns></returns>
         public async Task Send(Attitude a)
         {
             if (ViewModelLocator.Main.DataGdl90Enabled)
             {
-                // Stratux sends both ForeFlight and GDL90 AHRS at the same time
-                var ffAhrs = new Gdl90FfmAhrs(a);
-                var data = ffAhrs.ToGdl90Message();
-                await Send(data).ConfigureAwait(false);
-
                 if (ViewModelLocator.Main.DataStratuxEnabled)
                 {
                     var ahrs = new Gdl90Ahrs(a);
-                    data = ahrs.ToGdl90Message();
+                    var data = ahrs.ToGdl90Message();
+                    await Send(data).ConfigureAwait(false);
+                }
+                else
+                {
+                    var ffAhrs = new Gdl90FfmAhrs(a);
+                    var data = ffAhrs.ToGdl90Message();
                     await Send(data).ConfigureAwait(false);
                 }
             }
@@ -80,6 +75,11 @@ namespace fs2ff
             }
         }
 
+        /// <summary>
+        /// Converts and sends a Position packet
+        /// </summary>
+        /// <param name="p"></param>
+        /// <returns></returns>
         public async Task Send(Position p)
         {
             if (!ViewModelLocator.Main.DataGdl90Enabled)
@@ -99,6 +99,12 @@ namespace fs2ff
             }
         }
 
+        /// <summary>
+        /// Converts and sends a traffic packet. This can also be an Ownership report to the EFB
+        /// </summary>
+        /// <param name="t"></param>
+        /// <param name="id"></param>
+        /// <returns></returns>
         public async Task Send(Traffic t, uint id)
         {
             if (!t.IsValid())
@@ -123,6 +129,11 @@ namespace fs2ff
             }
         }
 
+        /// <summary>
+        /// Encodes and sends a string
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
         private async Task Send(string data)
         {
             if (_endPoint != null && _socket != null)
@@ -133,6 +144,11 @@ namespace fs2ff
             }
         }
 
+        /// <summary>
+        /// Sends the give byte array
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
         public async Task Send(byte[] data)
         {
             if (_endPoint != null && _socket != null)
@@ -143,6 +159,11 @@ namespace fs2ff
             }
         }
 
+        /// <summary>
+        /// If the plane has an airline ID then use that has the flight
+        /// </summary>
+        /// <param name="t"></param>
+        /// <returns></returns>
         private static string? TryGetFlightNumber(Traffic t) =>
             !string.IsNullOrEmpty(t.Td.Airline) && !string.IsNullOrEmpty(t.Td.FlightNumber)
                 ? $"{t.Td.Airline} {t.Td.FlightNumber}"

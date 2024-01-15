@@ -16,8 +16,12 @@ namespace fs2ff.Models
         public double GroundSpeedMps;
     }
 
+    /// <summary>
+    /// Wraps the Position data for better tracking (future work)
+    /// </summary>
     public class Position
     {
+        public const int Priority = 1; // If I end up making a packet priority queue.
         public PositionData Pd { get; set; }
         public DateTime LastUpdate { get; set; }
         public uint Iaco {  get; set; }
@@ -38,27 +42,22 @@ namespace fs2ff.Models
 
     }
 
+    /// <summary>
+    /// Position helper methods
+    /// </summary>
     public static class PositionExtensions
     {
         public const double ValidSecond = 10;
 
+        /// <summary>
+        /// Is the position data valid
+        /// </summary>
+        /// <param name="pos"></param>
+        /// <returns></returns>
         public static bool IsValid(this Position pos)
         {
             var span = DateTime.UtcNow - pos.LastUpdate;
             return pos.Pd.Latitude != 0 && pos.Pd.Longitude != 0 && span.TotalSeconds < ValidSecond;
-        }
-
-        public static Traffic ToTraffic(this Position pos)
-        {
-            var td = new TrafficData
-            {
-                Latitude = pos.Pd.Latitude,
-                Longitude = pos.Pd.Longitude,
-                Altitude = pos.Pd.AltitudeFeet,
-                AirspeedTrue = pos.Pd.GroundSpeedMps.MetersToKnots(),
-            };
-
-            return new Traffic(td, pos.Iaco, pos.LastUpdate);
         }
     }
 }

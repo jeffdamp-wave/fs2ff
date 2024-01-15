@@ -1,6 +1,5 @@
 ﻿// ReSharper disable InconsistentNaming
 
-using fs2ff.Converters;
 using fs2ff.Models;
 using Microsoft.FlightSimulator.SimConnect;
 using System;
@@ -49,6 +48,10 @@ namespace fs2ff.SimConnect
 
         public bool Connected => _simConnect != null;
 
+        /// <summary>
+        /// Connects FS2FF to Flight Sim using SimConnect
+        /// </summary>
+        /// <param name="hwnd"></param>
         public void Connect(IntPtr hwnd)
         {
             try
@@ -72,10 +75,16 @@ namespace fs2ff.SimConnect
             }
         }
 
+        /// <summary>
+        /// Disconnects from the Flight Sim
+        /// </summary>
         public void Disconnect() => DisconnectInternal(FlightSimState.Disconnected);
 
         public void Dispose() => DisconnectInternal(FlightSimState.Disconnected);
 
+        /// <summary>
+        /// SimConnect message dispatcher
+        /// </summary>
         public void ReceiveMessage()
         {
             try
@@ -89,6 +98,11 @@ namespace fs2ff.SimConnect
             }
         }
 
+        /// <summary>
+        /// Adjusts the range of the traffic that will be sent to the EFB in nautical miles
+        /// Note helicopters about hard set to 1/2 of fixed wing
+        /// </summary>
+        /// <param name="radius"></param>
         public void SetTrafficMaxRadius(uint radius)
         {
             if (Connected)
@@ -111,6 +125,11 @@ namespace fs2ff.SimConnect
             }
         }
 
+        /// <summary>
+        /// This takes the frequency setting in the UI and coverts it to a frame latency value
+        /// I might want to move some of the values into a config file.
+        /// </summary>
+        /// <param name="frequency"></param>
         private void SetAttitudeDataRate(uint frequency)
         {
             var rate = (1000 / frequency) / SimFrameLatencyMs;
@@ -155,12 +174,22 @@ namespace fs2ff.SimConnect
                 0, rate, 0);
         }
 
-
+        /// <summary>
+        /// Make all the values float64
+        /// </summary>
+        /// <param name="defineId"></param>
+        /// <param name="datumName"></param>
+        /// <param name="unitsName"></param>
+        /// <param name="datumType"></param>
         private void AddToDataDefinition(DEFINITION defineId, string datumName, string? unitsName, SIMCONNECT_DATATYPE datumType = SIMCONNECT_DATATYPE.FLOAT64)
         {
             _simConnect?.AddToDataDefinition(defineId, datumName, unitsName, datumType, 0, SimConnectImpl.SIMCONNECT_UNUSED);
         }
 
+        /// <summary>
+        /// Tells SimConnect to disconnect from the simulator
+        /// </summary>
+        /// <param name="state"></param>
         private void DisconnectInternal(FlightSimState state)
         {
             UnsubscribeEvents();
@@ -171,6 +200,9 @@ namespace fs2ff.SimConnect
             StateChanged?.Invoke(state);
         }
 
+        /// <summary>
+        /// Register for Attitude events
+        /// </summary>
         private void RegisterAttitudeStruct()
         {
             AddToDataDefinition(DEFINITION.Attitude, "PLANE PITCH DEGREES", "Degrees");
@@ -187,6 +219,9 @@ namespace fs2ff.SimConnect
             _simConnect?.RegisterDataDefineStruct<Attitude>(DEFINITION.Attitude);
         }
 
+        /// <summary>
+        /// Register for position events
+        /// </summary>
         private void RegisterPositionStruct()
         {
             AddToDataDefinition(DEFINITION.Position, "PLANE LATITUDE", "Degrees");
@@ -200,6 +235,9 @@ namespace fs2ff.SimConnect
             _simConnect?.RegisterDataDefineStruct<PositionData>(DEFINITION.Position);
         }
 
+        /// <summary>
+        /// Register for traffic events (ADS-B events)
+        /// </summary>
         private void RegisterTrafficStruct()
         {
             AddToDataDefinition(DEFINITION.Traffic, "PLANE LATITUDE", "Degrees");
@@ -232,7 +270,6 @@ namespace fs2ff.SimConnect
 
         /// <summary>
         /// Tracks Traffic added after the initial connection
-        /// TODO: This causes a lot of traffic and some EFBs can't handle high X-PLane protocal traffic need to fix
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="data"></param>
@@ -252,12 +289,22 @@ namespace fs2ff.SimConnect
             }
         }
 
+        /// <summary>
+        /// SimConnect has raised an internal exception and we need to reset
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="data"></param>
         private void SimConnect_OnRecvException(SimConnectImpl sender, SIMCONNECT_RECV_EXCEPTION data)
         {
             Console.Error.WriteLine("Exception caught: " + data.dwException);
             DisconnectInternal(FlightSimState.ErrorOccurred);
         }
 
+        /// <summary>
+        /// Connection to SimConnect was successful.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="data"></param>
         private void SimConnect_OnRecvOpen(SimConnectImpl sender, SIMCONNECT_RECV data)
         {
             RegisterPositionStruct();
@@ -277,12 +324,22 @@ namespace fs2ff.SimConnect
             //_simConnect?.SubscribeToFacilities(SIMCONNECT_FACILITY_LIST_TYPE.AIRPORT, REQUEST.Airport);
         }
 
+        /// <summary>
+        /// SimConnect layer or MSFS was closed
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="data"></param>
         private void SimConnect_OnRecvQuit(SimConnectImpl sender, SIMCONNECT_RECV data)
         {
             DisconnectInternal(FlightSimState.Quit);
         }
 
-        private async void SimConnect_OnRecvSimobjectData(SimConnectImpl sender, SIMCONNECT_RECV_SIMOBJECT_DATA data)
+        /// <summary>
+        /// Main callback for most data
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="data"></param>
+        private async void SimConnect_OnRecvSimObjectData(SimConnectImpl sender, SIMCONNECT_RECV_SIMOBJECT_DATA data)
         {
             if (data.dwRequestID == (uint)REQUEST.TrafficObjectBase)
             {
@@ -350,9 +407,11 @@ namespace fs2ff.SimConnect
             Debug.WriteLine($"Unhandled event: {data.dwID}");
         }
 
-        //TODO: instead of asking doing a one second add for every traffic object
-        // we could just do a pump on The traffic Object Type. There is some SDK documents that
-        // state Traffic can have issues with this type of data pump.
+        /// <summary>
+        /// Gets called anytime a new object (Aircraft, etc.) is added to the sim.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="data"></param>
         private void SimConnect_OnRecvSimObjectDataByType(SimConnectImpl sender, SIMCONNECT_RECV_SIMOBJECT_DATA_BYTYPE data)
         {
             var dwObjectID = data.dwObjectID;
@@ -370,6 +429,9 @@ namespace fs2ff.SimConnect
             }
         }
 
+        /// <summary>
+        /// Enable callbacks on the selected events
+        /// </summary>
         private void SubscribeEvents()
         {
             if (_simConnect != null)
@@ -377,7 +439,7 @@ namespace fs2ff.SimConnect
                 _simConnect.OnRecvOpen += SimConnect_OnRecvOpen;
                 _simConnect.OnRecvQuit += SimConnect_OnRecvQuit;
                 _simConnect.OnRecvException += SimConnect_OnRecvException;
-                _simConnect.OnRecvSimobjectData += SimConnect_OnRecvSimobjectData;
+                _simConnect.OnRecvSimobjectData += SimConnect_OnRecvSimObjectData;
                 _simConnect.OnRecvSimobjectDataBytype += SimConnect_OnRecvSimObjectDataByType;
                 _simConnect.OnRecvEventObjectAddremove += SimConnect_OnRecvEventObjectAddRemove;
                 //                _simConnect.OnRecvAirportList += _simConnect_OnRecvAirportList;
@@ -385,13 +447,16 @@ namespace fs2ff.SimConnect
             }
         }
 
+        /// <summary>
+        /// Remove listeners
+        /// </summary>
         private void UnsubscribeEvents()
         {
             if (_simConnect != null)
             {
                 _simConnect.OnRecvEventObjectAddremove -= SimConnect_OnRecvEventObjectAddRemove;
                 _simConnect.OnRecvSimobjectDataBytype -= SimConnect_OnRecvSimObjectDataByType;
-                _simConnect.OnRecvSimobjectData -= SimConnect_OnRecvSimobjectData;
+                _simConnect.OnRecvSimobjectData -= SimConnect_OnRecvSimObjectData;
                 _simConnect.OnRecvException -= SimConnect_OnRecvException;
                 _simConnect.OnRecvQuit -= SimConnect_OnRecvQuit;
                 _simConnect.OnRecvOpen -= SimConnect_OnRecvOpen;
@@ -400,6 +465,7 @@ namespace fs2ff.SimConnect
             }
         }
 
+        //TODO: this is future work on FIS-B I'll implement at some point
         //private void _simConnect_OnRecvCloudState(SimConnectImpl sender, SIMCONNECT_RECV_CLOUD_STATE data)
         //{
         //    Debug.WriteLine($"Data: {data.dwArraySize}");
