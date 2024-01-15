@@ -1,10 +1,9 @@
 ﻿using System;
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace fs2ff.Models
 {
-     public class Gdl90FfmId : Gdl90Base
+    public class Gdl90FfmId : Gdl90Base
     {
         /// <summary>
         /// ForeFlight "ID Message".
@@ -15,7 +14,7 @@ namespace fs2ff.Models
             Msg[0] = 0x65; // Message type "ForeFlight".
             Msg[1] = 0;    // ID message identifier.
             Msg[2] = 1;    // Message version.
-            
+
             // Serial number. Set to "invalid" for now.
             for (var i = 3; i <= 10; i++)
             {

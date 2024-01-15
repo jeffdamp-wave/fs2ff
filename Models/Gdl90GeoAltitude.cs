@@ -1,9 +1,9 @@
-﻿using System;
-using GeoidHeightsDotNet;
+﻿using GeoidHeightsDotNet;
+using System;
 
 namespace fs2ff.Models
 {
-    public class Gdl90GeoAltitude :Gdl90Base
+    public class Gdl90GeoAltitude : Gdl90Base
     {
         /// <summary>
         /// GDL-90 Ownership Geometric Altitude (1Hz) 5 bytes.
@@ -16,10 +16,10 @@ namespace fs2ff.Models
 
             // Bytes 1-2 Height above WGS84 Ellipsoid LSB = 5ft
             // Using GeoidHeightsDotNet to calculate the height correction for EGM2008
-            var h = GeoidHeights.undulation(pos.Latitude, pos.Longitude).MetersToFeet();
-            var encodedAlt = Convert.ToInt16((pos.Altitude + h).RoundBy(5).AdjustToBounds(-1000, short.MaxValue) / 5);
-            Msg[1] = (byte)(encodedAlt >> 8);     // Altitude.
-            Msg[2] = (byte)(encodedAlt & 0x00FF); // Altitude.
+            var h = GeoidHeights.undulation(pos.Pd.Latitude, pos.Pd.Longitude).MetersToFeet();
+            var encodedAlt = Convert.ToInt16((pos.Pd.AltitudeFeet + h).RoundBy(5).AdjustToBounds(-1000, short.MaxValue) / 5);
+            Msg[1] = (byte)(encodedAlt >> 8);     // AltitudeFeet.
+            Msg[2] = (byte)(encodedAlt & 0x00FF); // AltitudeFeet.
 
             // No Vertical Warning, VFOM = 10 meters
             Msg[3] = 0x00;

@@ -11,8 +11,8 @@
         mc:Ignorable="d"
         Title="{Binding WindowTitle}"
         Icon="img\icon.ico"
-        Width="600" Height="530"
-        MinWidth="500" MinHeight="530"
+        Width="600" Height="580"
+        MinWidth="500" MinHeight="580"
         Closing="Window_Closing"
         Loaded="Window_Loaded"
         DataContext="{Binding Main, Source={StaticResource Locator}}">
@@ -90,15 +90,15 @@
                 <CheckBox
                     IsChecked="{Binding AutoDetectIpEnabled, Mode=TwoWay}"
                     Content="Auto-detect*"
-                    ToolTip="Attempts to locate the EFB already running (Setting IP manually is recommended)." />
+                    ToolTip="When ForeFlight is running it broadcasts a message with it's IP. Listen for that broadcast and use that IP to connect to FF" />
                 <TextBox
-                    ToolTip="Manually set the EFBs IP address here"
+                    ToolTip="Manually set the EFBs IP address here. Required for non FF EFBs."
                     Text="{
                         Binding IpAddress, Mode=TwoWay,
                         Converter={c:IpAddressToStringConverter},
                         UpdateSourceTrigger=PropertyChanged, Delay=5000}"
                     Template="{StaticResource WatermarkTextBoxTemplate}"
-                    Tag="192.168.0.45"
+                    Tag="192.168.0.42"
                     Margin="0,10,0,0">
                     <i:Interaction.Behaviors>
                         <b:MoveFocusOnEnterBehavior />
@@ -127,28 +127,43 @@
                 <CheckBox
                     IsChecked="{Binding DataGdl90Enabled, Mode=TwoWay}"
                     Content="Use GDL90 Protocol"
-                    ToolTip="Send Data via GDL90 protocol (special setup is required for Garmin Pilot)"/>
+                    ToolTip="Send Data via GDL90 protocol (supported by more EFBs) instead of X-Plane"/>
                 <RadioButton x:Name="Stratus"
                     Content="+ Stratus" Height="32" GroupName="TypeRadio" FontSize="12" Margin="10,0,0,0"
                     IsChecked="{Binding DataStratusEnabled, Mode=TwoWay}" IsEnabled="{Binding DataGdl90Enabled}" 
-                    ToolTip="Emulate Stratus 3 Device. Garmin Pilot requires the host to have an adapter bound to 10.29.39.1 and the client must be on the 10.29.39.x subnet."/>
+                    ToolTip="Emulate Stratus 3 Device. Probably works best with FF."/>
                 <RadioButton x:Name="Stratux"
                     Content="+ Stratux" Height="32" GroupName="TypeRadio" FontSize="12" Margin="10,0,0,0"
                     IsChecked="{Binding DataStratuxEnabled, Mode=TwoWay}" IsEnabled="{Binding DataGdl90Enabled}" 
-                    ToolTip="Emulate Stratux Works with FF and Garmin Pilot ver 10.7.1+ just needs to be on the same subnet as the iPad"/>
+                    ToolTip="Emulate Stratux Device. Works well with most EFBs (FF, GP, Sky Demon, Level, etc.). Outputs some addition data that can offer a richer experience."/>
                 <Label
                     Content="{Binding Value, ElementName=Slider, Converter={c:FormatStringConverter}, ConverterParameter='ATTITUDE FREQ: {0} Hz'}"
-                    Margin="0,14,0,5" />
+                    Margin="0,10,0,1" />
                 <Slider
                     Name="Slider"
                     IsEnabled="{Binding DataAttitudeEnabled}"
                     Value="{Binding AttitudeFrequency, Mode=TwoWay, Delay=2000, Converter={c:UIntToDoubleConverter}}"
                     Minimum="{Binding AttitudeFrequencyMin, Converter={c:UIntToDoubleConverter}}"
                     Maximum="{Binding AttitudeFrequencyMax, Converter={c:UIntToDoubleConverter}}"
+                    TickFrequency="5"
                     Focusable="False"
-                    TickPlacement="Both"
+                    TickPlacement="BottomRight"
                     IsSnapToTickEnabled="True"
-                    ToolTip="Adjusts the update rate of sending AHARS data to the EFB"/>
+                    ToolTip="Adjusts the update rate of sending AHARS data to the EFB. Deminishing returns above 20hz. EFB can be laggy below 10hz"/>
+                <Label 
+                    Content="{Binding Value, ElementName=RadiusSlider, Converter={c:FormatStringConverter}, ConverterParameter='Traffic Radius: {0} NM'}"
+                    Margin="0, 5, 0, 1" />
+                <Slider
+                    Name="RadiusSlider"
+                    IsEnabled="{Binding DataTrafficEnabled}"
+                    Value="{Binding TrafficRadiusNm, Mode=TwoWay, Delay=1000, Converter={c:UIntToDoubleConverter}}"
+                    Maximum="{Binding TrafficRadiusNmMax, Converter={c:UIntToDoubleConverter}}"
+                    Minimum="{Binding TrafficRadiusNmMin, Converter={c:UIntToDoubleConverter}}"
+                    TickFrequency="5"
+                    Focusable="False"
+                    TickPlacement="BottomRight"
+                    IsSnapToTickEnabled="True"
+                    ToolTip="Adjust the Detectable Traffic bubble around the player aircraft. This can help with performance of the EFB if there is heavy traffic."/>
             </StackPanel>
         </ui:SplitView.Pane>
         <Grid>

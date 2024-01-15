@@ -27,35 +27,40 @@ namespace fs2ff
         private Traffic _ownerInfo;
 
         private uint _attitudeFrequency = Preferences.Default.att_freq.AdjustToBounds(AttitudeFrequencyMin, AttitudeFrequencyMax);
+        private uint _trafficRadiusNm = Preferences.Default.traffic_radius_nautical_miles.AdjustToBounds(TrafficRadiusNmMin, TrafficRadiusNmMax);
         private bool _autoDetectIpEnabled = Preferences.Default.ip_detection_enabled;
         private bool _autoConnectEnabled = Preferences.Default.auto_connect_enabled;
-        private bool _autoExit  = Preferences.Default.auto_exit;
+        private bool _autoExit = Preferences.Default.auto_exit;
         private bool _dataAttitudeEnabled = Preferences.Default.att_enabled;
         private bool _gdl90Enabled = Preferences.Default.gdl90_enabled;
         private bool _hideTrafficEnabled = Preferences.Default.hide_static_traffic_enabled;
-        private bool _settingsPanelVisable = Preferences.Default.settings_pane_visable;
+        private bool _settingsPanelVisible = Preferences.Default.settings_pane_visible;
 
         private bool _dataPositionEnabled = Preferences.Default.pos_enabled;
         private bool _dataTrafficEnabled = Preferences.Default.tfk_enabled;
-        private bool  _dataStratusEnabled = Preferences.Default.stratus_enabled;
-        private bool  _dataStratuxEnabled = Preferences.Default.stratux_enabled;
+        private bool _dataStratusEnabled = Preferences.Default.stratus_enabled;
+        private bool _dataStratuxEnabled = Preferences.Default.stratux_enabled;
         private bool _errorOccurred;
         private IntPtr _hwnd = IntPtr.Zero;
         private IPAddress? _ipAddress;
         private uint _ipHintMinutesLeft = Preferences.Default.ip_hint_time;
 
+        /// <summary>
+        /// We keep a copy of the last Ownership record to use later against other traffic.
+        /// GDL90 will flag other Traffic that is near us so we need global access to this value.
+        /// </summary>
         public Traffic OwnerInfo
         {
             get
             {
-                lock(_ownerLock)
+                lock (_ownerLock)
                 {
                     return _ownerInfo;
                 }
             }
             set
             {
-                lock(_ownerLock)
+                lock (_ownerLock)
                 {
                     _ownerInfo = value;
                 }
@@ -84,8 +89,10 @@ namespace fs2ff
 
             _ipHintTimer = new DispatcherTimer(TimeSpan.FromMinutes(1), DispatcherPriority.Normal, IpHintCallback, Dispatcher.CurrentDispatcher);
             _autoConnectTimer = new DispatcherTimer(TimeSpan.FromSeconds(5), DispatcherPriority.Normal, AutoConnectCallback, Dispatcher.CurrentDispatcher);
-            _stratusTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(800), DispatcherPriority.Normal, SimConnectSratusUpdate, Dispatcher.CurrentDispatcher);
+            _stratusTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(800), DispatcherPriority.Normal, SimConnectDeviceStatusUpdate, Dispatcher.CurrentDispatcher);
             _gdl90Timer = new DispatcherTimer(TimeSpan.FromMilliseconds(500), DispatcherPriority.Normal, SimConnectGdl90Update, Dispatcher.CurrentDispatcher);
+            _ownerInfo = new Traffic(new TrafficData(), 1);
+            _ownerInfo.LastUpdate = DateTime.MinValue;
 
             ManageAutoConnect();
             CheckForUpdates();
@@ -94,6 +101,11 @@ namespace fs2ff
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
+        public static uint AttitudeFrequencyMax => 50;
+        public static uint AttitudeFrequencyMin => 5;
+        public static uint TrafficRadiusNmMax => 100;
+        public static uint TrafficRadiusNmMin => 5;
+
         public static string WindowTitle => $"fs2ff (GDL90) - {App.AssemblyVersion}";
 
         public uint AttitudeFrequency
@@ -101,16 +113,41 @@ namespace fs2ff
             get => _attitudeFrequency;
             set
             {
-                _attitudeFrequency = value.AdjustToBounds(AttitudeFrequencyMin, AttitudeFrequencyMax);
-                _simConnect.SetAttitudeFrequency(_attitudeFrequency);
-                Preferences.Default.att_freq = value;
-                Preferences.Default.Save();
+                if (_attitudeFrequency != value)
+                {
+                    _attitudeFrequency = value.AdjustToBounds(AttitudeFrequencyMin, AttitudeFrequencyMax);
+                    Preferences.Default.att_freq = value;
+                    Preferences.Default.Save();
+                    if (_simConnect.Connected)
+                    {
+                        Connect();
+                    }
+                }
             }
         }
 
-        public static uint AttitudeFrequencyMax => 20;
-
-        public static uint AttitudeFrequencyMin => 5;
+        /// <summary>
+        /// Gets or Sets the Distance from the player aircraft to look for other Traffic in nautical miles
+        /// BUGBUG: Seem like there is an issue in the SDK where it works at 5, 10, but above 10 it seem to go to far out.
+        /// </summary>
+        public uint TrafficRadiusNm
+        {
+            get => _trafficRadiusNm;
+            set
+            {
+                if (value != _trafficRadiusNm)
+                {
+                    _trafficRadiusNm = value.AdjustToBounds(TrafficRadiusNmMin, TrafficRadiusNmMax);
+                    Preferences.Default.traffic_radius_nautical_miles = value;
+                    Preferences.Default.Save();
+                    // Requires connection Reset
+                    if (_simConnect.Connected)
+                    {
+                        Connect();
+                    }
+                }
+            }
+        }
 
         public bool AutoConnectEnabled
         {
@@ -195,7 +232,11 @@ namespace fs2ff
                     this._gdl90Enabled = value;
                     Preferences.Default.gdl90_enabled = value;
                     Preferences.Default.Save();
-                    ResetDataSenderConnection();
+                    // Force a complete reconnect
+                    if (_simConnect.Connected)
+                    {
+                        this.Connect();
+                    }
                 }
             }
         }
@@ -213,7 +254,7 @@ namespace fs2ff
                 }
             }
         }
-        
+
         public bool DataStratusEnabled
         {
             get => _dataStratusEnabled;
@@ -224,10 +265,14 @@ namespace fs2ff
                     _dataStratusEnabled = value;
                     Preferences.Default.stratus_enabled = value;
                     Preferences.Default.Save();
+                    // Force a complete reconnect
+                    if (_simConnect.Connected)
+                    {
+                        this.Connect();
+                    }
                 }
             }
         }
-
 
         public bool DataStratuxEnabled
         {
@@ -239,10 +284,15 @@ namespace fs2ff
                     _dataStratuxEnabled = value;
                     Preferences.Default.stratux_enabled = value;
                     Preferences.Default.Save();
+                    // Force a complete reconnect
+                    if (_simConnect.Connected)
+                    {
+                        this.Connect();
+                    }
                 }
             }
         }
-        
+
         public bool DataPositionEnabled
         {
             get => _dataPositionEnabled;
@@ -300,35 +350,21 @@ namespace fs2ff
             }
         }
 
-
-        //private bool SetProperty<T>(ref T field, T newValue, [CallerMemberName] string propertyName = null)
-        //{
-        //    if (!Equals(field, newValue))
-        //    {
-        //        field = newValue;
-        //        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        //        return true;
-        //    }
-
-        //    return false;
-        //}
-
-
         public bool IpHintVisible => IpAddress == null && IpHintMinutesLeft == 0;
 
         public bool NotLabelVisible { get; private set; }
 
         public ICommand OpenSettingsCommand { get; }
 
-        public bool SettingsPaneVisible 
+        public bool SettingsPaneVisible
         {
-            get => _settingsPanelVisable;
+            get => _settingsPanelVisible;
             set
             {
-                if(value  != _settingsPanelVisable)
+                if (value != _settingsPanelVisible)
                 {
-                    _settingsPanelVisable = value;
-                    Preferences.Default.settings_pane_visable = value;
+                    _settingsPanelVisible = value;
+                    Preferences.Default.settings_pane_visible = value;
                     Preferences.Default.Save();
                 }
             }
@@ -380,6 +416,7 @@ namespace fs2ff
             _simConnect.AttitudeReceived -= SimConnectAttitudeReceived;
             _simConnect.PositionReceived -= SimConnectPositionReceived;
             _simConnect.StateChanged -= SimConnectStateChanged;
+            _simConnect.OwnerReceived -= SimConnectOwnerReceived;
             _simConnect.Dispose();
 
             _dataSender.Dispose();
@@ -396,7 +433,7 @@ namespace fs2ff
             UpdateChecker.Check().ContinueWith(task => UpdateInfo = task.Result, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
-        private void Connect() => _simConnect.Connect(WindowHandle, AttitudeFrequency);
+        private void Connect() => _simConnect.Connect(WindowHandle);
 
         private void Disconnect() => _simConnect.Disconnect();
 
@@ -479,19 +516,12 @@ namespace fs2ff
             }
         }
 
-        private async Task SimConnectPositionReceived(Position pos)
-        {
-            if (DataPositionEnabled && (pos.Latitude != 0d || pos.Longitude != 0d))
-            {
-                    await _dataSender.Send(pos).ConfigureAwait(false);
-            }
-        }
-
         private void SimConnectStateChanged(FlightSimState state)
         {
             _errorOccurred = state.HasFlag(FlightSimState.ErrorOccurred);
             if (state == FlightSimState.Quit && this._autoExit)
             {
+                Preferences.Default.Save();
                 System.Windows.Application.Current.Shutdown();
             }
 
@@ -506,6 +536,11 @@ namespace fs2ff
         /// <returns></returns>
         private async void SimConnectGdl90Update(object? sender, EventArgs e)
         {
+            if (!DataGdl90Enabled)
+            {
+                return;
+            }
+
             var hb = new Gdl90Heartbeat();
             var data = hb.ToGdl90Message();
             await _dataSender.Send(data).ConfigureAwait(false);
@@ -519,11 +554,16 @@ namespace fs2ff
         }
 
         /// <summary>
-        /// Stratus/FF specific update messages
+        /// Send emulated device specific status messages
         /// </summary>
         /// <returns></returns>
-        private async void SimConnectSratusUpdate(object? sender, EventArgs e)
+        private async void SimConnectDeviceStatusUpdate(object? sender, EventArgs e)
         {
+            if (!DataGdl90Enabled)
+            {
+                return;
+            }
+
             if (ViewModelLocator.Main.DataStratusEnabled)
             {
                 var status = new Gdl90StratusStatus();
@@ -540,25 +580,51 @@ namespace fs2ff
             await _dataSender.Send(ffmId.ToGdl90Message()).ConfigureAwait(false);
         }
 
+        private async Task SimConnectPositionReceived(Position pos)
+        {
+            if (DataPositionEnabled && pos.IsValid())
+            {
+                await _dataSender.Send(pos).ConfigureAwait(false);
+            }
+        }
+
         private async Task SimConnectTrafficReceived(Traffic tfk, uint id)
         {
             // Ignore traffic with id=1, that's our own aircraft
-            if (DataTrafficEnabled && id != 1)
+            if (DataTrafficEnabled && id != SimConnectAdapter.OBJECT_ID_USER_RESULT)
             {
-                await _dataSender.Send(tfk, id).ConfigureAwait(false);
+                bool send = true;
+                if (OwnerInfo.IsValid())
+                {
+                    // MSFS Traffic Request bubble isn't so good. It will either do < 10nm or <60nm doesn't seem to do any less than that.
+                    var curRadius = TrafficRadiusNm.NmToMeters();
+                    var distance = OwnerInfo.Td.DistanceMeters(tfk.Td);
+                    if (Convert.ToUInt32(distance.Horizontal) > curRadius)
+                    {
+                        send = false;
+                    }
+                }
+
+                if (send)
+                {
+                    await _dataSender.Send(tfk, id).ConfigureAwait(false);
+                }
             }
         }
 
         private async Task SimConnectOwnerReceived(Traffic tfk, uint id)
         {
             OwnerInfo = tfk;
-            await _dataSender.Send(tfk, id).ConfigureAwait(false);
+            if (DataGdl90Enabled)
+            {
+                await _dataSender.Send(tfk, id).ConfigureAwait(false);
+            }
         }
 
         private void ToggleConnect()
         {
             if (_simConnect.Connected) Disconnect();
-            else                          Connect();
+            else Connect();
         }
 
         private void ToggleSettingsPane() => SettingsPaneVisible = !SettingsPaneVisible;

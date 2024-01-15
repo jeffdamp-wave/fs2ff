@@ -30,7 +30,7 @@
       <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="att_freq" Type="System.UInt32" Scope="User">
-      <Value Profile="(Default)">10</Value>
+      <Value Profile="(Default)">20</Value>
     </Setting>
     <Setting Name="ip_hint_time" Type="System.UInt32" Scope="User">
       <Value Profile="(Default)">10</Value>
@@ -53,8 +53,11 @@
     <Setting Name="auto_exit" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="settings_pane_visable" Type="System.Boolean" Scope="User">
+    <Setting Name="settings_pane_visible" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="traffic_radius_nautical_miles" Type="System.UInt32" Scope="User">
+      <Value Profile="(Default)">100</Value>
     </Setting>
   </Settings>
 </SettingsFile>

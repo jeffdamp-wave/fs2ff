@@ -3,38 +3,37 @@
 ## What is it?
 Note: astenlund is no longer supporting his branch. I'm going to attempt to do further work on this and continue the support. I have a day job and multiple hobbies don't expect much.
 
-This fork of astenlund/fs2ff that implements the GDL90 protocol as an option instead of using XPlane protocol. This is a work in progress as there is still a lot of things left to do.  I'm just doing this work to learn more about GDL90 and how the different EFBs work with it.
+This fork of astenlund/fs2ff that implements the GDL90 protocol as an option instead of using XPlane protocol. This is a work in progress as there is still a lot of things left to do.
+I originally started this work to understand GDL90 better and test changes I wanted in my Stratux device.
+
+The executable is Windows .Net8 self-contained binary that has all of the needed files including the latest SimConnect.dll
 
 ## How do I use it?
-
-see astenlund/fs2ff
+1. Download the latest release. https://github.com/jeffdamp-wave/fs2ff/releases
+1. Run the exe.
+1. You can select auto-detect* if you are using ForeFlight. FF broadcasts a message and setting this will allow for auto-detection.
+1. Run MSFS on the same computer(I'll add some remote options soon).
+1. Click connect
+1. For GDL90 Most EFBs will will detect the traffic and just start working. I recommend Stratux but you can also play around with Stratus emulation
+1. If you select the X-Plane protocol this will require some addition steps in most EFBs. Example in GP you have to go to settings->Flight Simulation and turn it on.
 
 ## Does it work with other EFB apps?
-Yes Any EFB that supports Stratux GDL90 protocol over ethernet/wifi
+
+Yes Any EFB that supports Stratux/Stratus GDL90 or X-Plane protocol over ethernet/wifi
 
 ### Garmin Pilot
-Now supported using GDL90 and Stratux emulation. When GP added Stratux support there was no need to emulate a Stratus which required a very specific IP range to work correctly. I'll probably remove Stratus support soon
+Recent changes to GP have added better support for both Stratux and Stratus. I recommend using Stratux emulation on GP as you get a few more features (like turn coordinator)
 
-Stratus emulation- This is a PITA and I don't recommend it. The PC that is running FS2FF needs to have an IP of 10.29.39.1 and the device (iPad) needs to be in that subnet 10.29.39.x otherwise GP will ignore the traffic.  I have on board wifi on my PC.  It required enabling that has a hotspot setting a static ip on that NIC to 10.29.39.1 and then a static IP on the iPad of 10.29.39.2
+### Other apps
 
-### Other apps (not verified by me)
-
+- Levil Aviation App. From my testing this is the most responsive AHRS app I have found. Both GP and FF have a little lag in their synthetic vision implementations.
 - FlyQ EFB (thanks, @erayymz)
-- FltPlan GO (need to select XPlane as source of GPS data)
+- FltPlan GO 
+- SkyDemon (tested some time ago)
 
 ## Does it work with other flight simulators?
 
-### X-Plane
-
-No need for my app. X-Plane already has this broadcast capability built-in, see [this support page](https://foreflight.com/support/support-center/category/about-foreflight-mobile/204115525).
-
-### Prepar3D
-
-Should work straight out of the box for P3D 4.0 and up, so no need for my app. For older versions, use [FSUIPC](http://www.schiratti.com/dowson.html). See [this support page](https://foreflight.com/support/support-center/category/about-foreflight-mobile/204115345).
-
-### Other flight sims
-
-As of now, no other flight simulators have been tested.
+This should work with any Flight Sim using SimConnect. I have not tested any myself. I would guess Prepare3D works?
 
 ## How do I build this?
 
@@ -67,8 +66,8 @@ As of now, no other flight simulators have been tested.
 
 ## What's with the "Windows protected your PC" popup?
 
-This is Microsoft telling you that the app has not been cryptographically signed. Software that you download from big corporations does not present this behaviour, because these companies typically purchase certificates from trusted Certificate Authorities and sign their binaries before shipping to customers. This is cumbersome and expensive and not in the scope of this open source project. The binaries that I have provided are for convenience. If you do not trust me (and why should you?), you are more than welcome to build from source yourself (see instructions above).
+This is Microsoft telling you that the app has not been cryptographically signed. If you worry about the binary you are welcome to build your own. I keep the binary in sync with the main branch.
 
 ## I have problems!
 
-Don't ask
+https://github.com/jeffdamp-wave/fs2ff/issues or https://github.com/jeffdamp-wave/fs2ff/discussions

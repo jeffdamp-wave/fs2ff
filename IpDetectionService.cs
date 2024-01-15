@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Hosting;
 using System;
 using System.Net;
 using System.Net.Sockets;
@@ -5,10 +6,12 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Hosting;
 
 namespace fs2ff
 {
+    /// <summary>
+    /// When FF is running it broadcasts a message on  63093
+    /// </summary>
     public class IpDetectionService : IHostedService
     {
         private const int Port = 63093;
@@ -32,6 +35,8 @@ namespace fs2ff
                         {
                             NewIpDetected?.Invoke(result.RemoteEndPoint.Address);
                         }
+
+                        await Task.Delay(5);
                     }
                 }
                 catch (SocketException e)

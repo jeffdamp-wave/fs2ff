@@ -133,7 +133,7 @@ namespace fs2ff {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("10")]
+        [global::System.Configuration.DefaultSettingValueAttribute("20")]
         public uint att_freq {
             get {
                 return ((uint)(this["att_freq"]));
@@ -230,12 +230,24 @@ namespace fs2ff {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool settings_pane_visable {
+        public bool settings_pane_visible {
             get {
-                return ((bool)(this["settings_pane_visable"]));
+                return ((bool)(this["settings_pane_visible"]));
             }
             set {
-                this["settings_pane_visable"] = value;
+                this["settings_pane_visible"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("100")]
+        public uint traffic_radius_nautical_miles {
+            get {
+                return ((uint)(this["traffic_radius_nautical_miles"]));
+            }
+            set {
+                this["traffic_radius_nautical_miles"] = value;
             }
         }
     }

@@ -12,6 +12,8 @@ namespace fs2ff.Models
         public const double FEET_PER_METER = 3.28084;
         public const double METERS_TO_KNOTS = 0.5144447;
         public const double METERS_TO_MILES = 0.000621371193;
+        public const double NAUTICAL_MILES_TO_METERS = 1852;
+        public const double METERS_TO_NAUTICAL_MILES = 1 / NAUTICAL_MILES_TO_METERS;
         public static ushort[] Crc16Table = new ushort[256];
 
         static Gdl90Util()
@@ -34,7 +36,7 @@ namespace fs2ff.Models
             var result = dividend / inverse;
             return result;
         }
-        
+
         /// <summary>
         /// Converts the double from meters per second to knots
         /// </summary>
@@ -76,6 +78,46 @@ namespace fs2ff.Models
         }
 
         /// <summary>
+        /// Meters to Nautical Miles
+        /// </summary>
+        /// <param name="nauticalMiles"></param>
+        /// <returns></returns>
+        public static uint NmToMeters(this uint nauticalMiles)
+        {
+            return Convert.ToUInt32(nauticalMiles * NAUTICAL_MILES_TO_METERS);
+        }
+
+        /// <summary>
+        /// Nautical Miles to Meters
+        /// </summary>
+        /// <param name="nauticalMiles"></param>
+        /// <returns></returns>
+        public static double NmToMeters(this double nauticalMiles)
+        {
+            return nauticalMiles * NAUTICAL_MILES_TO_METERS;
+        }
+
+        /// <summary>
+        /// Meters to Nautical Miles
+        /// </summary>
+        /// <param name="meters"></param>
+        /// <returns></returns>
+        public static uint MetersToNm(this uint meters)
+        {
+            return Convert.ToUInt32(meters * METERS_TO_NAUTICAL_MILES);
+        }
+
+        /// <summary>
+        /// Nautical Miles to Meters
+        /// </summary>
+        /// <param name="meters"></param>
+        /// <returns></returns>
+        public static double MetersToNm(this double meters)
+        {
+            return meters * METERS_TO_NAUTICAL_MILES;
+        }
+
+        /// <summary>
         /// Computes the CRC for the given byte array
         /// </summary>
         /// <param name="data"></param>
@@ -83,7 +125,7 @@ namespace fs2ff.Models
         public static ushort ComputeCrc(IEnumerable<byte> data)
         {
             ushort ret = 0;
-            foreach(var d in data)
+            foreach (var d in data)
             {
                 ret = (ushort)(Crc16Table[ret >> 8] ^ (ret << 8) ^ (d));
             }

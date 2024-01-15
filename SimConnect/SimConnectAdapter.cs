@@ -1,48 +1,68 @@
 ﻿// ReSharper disable InconsistentNaming
 
+using fs2ff.Models;
+using Microsoft.FlightSimulator.SimConnect;
 using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading;
 using System.Threading.Tasks;
-using fs2ff.Models;
-using Microsoft.FlightSimulator.SimConnect;
 using SimConnectImpl = Microsoft.FlightSimulator.SimConnect.SimConnect;
 
 namespace fs2ff.SimConnect
 {
     public class SimConnectAdapter : IDisposable
     {
+        /// <summary>
+        /// Any data having to do with the players aircraft will have this value.
+        /// </summary>
+        public const uint OBJECT_ID_USER_RESULT = 1;
+
+        /// <summary>
+        /// SIM_FRAME latency tested on my machine (7800X3d) to be ~10ms not sure if this is different on other machines
+        /// </summary>
+        public const uint SimFrameLatencyMs = 10;
+
+        // The following *Rate consts are multipliers of SIM_FRAME events. The *Rate values below increase the latency
+        // by a multiple of SIM_FRAME. i.e. 1 (or 0) == 10ms, 2 == 20ms 3 == 30ms and so on.
+
+        // TODO: Make some sort of user settable inputs for the Default*Rate values.
+        private const uint DefaultTrafficRate = 90;
+
+        // GDL90 Spec is 1hz This ties to your self position on the map
+        private const uint DefaultPositionRate = 10;
+
         private const string AppName = "fs2ff";
         private const uint WM_USER_SIMCONNECT = 0x0402;
-        private const uint OBJECT_ID_USER_RESULT = 1;
-        private const uint AircraftRadius = 185200;
-        private const uint HeliRadius = 92600;
 
-        private Timer? _attitudeTimer;
+
         private SimConnectImpl? _simConnect;
+
+        private uint _lastSetFrequency = Preferences.Default.att_freq;
 
         public event Func<Attitude, Task>? AttitudeReceived;
         public event Func<Position, Task>? PositionReceived;
         public event Action<FlightSimState>? StateChanged;
         public event Func<Traffic, uint, Task>? TrafficReceived;
         public event Func<Traffic, uint, Task>? OwnerReceived;
-        //public event Func<bool>? Quit;
 
         public bool Connected => _simConnect != null;
 
-        public void Connect(IntPtr hwnd, uint attitudeFrequency)
+        /// <summary>
+        /// Connects FS2FF to Flight Sim using SimConnect
+        /// </summary>
+        /// <param name="hwnd"></param>
+        public void Connect(IntPtr hwnd)
         {
             try
             {
                 UnsubscribeEvents();
 
                 _simConnect?.Dispose();
-                _attitudeTimer?.Dispose();
 
                 _simConnect = new SimConnectImpl(AppName, hwnd, WM_USER_SIMCONNECT, null, 0);
-                _attitudeTimer = new Timer(RequestAttitudeData, null, 100, 1000 / attitudeFrequency);
+                //// TODO: Remove this
+                //_attitudeTimer = new Timer(RequestAttitudeData, null, 100, 1000 / attitudeFrequency);
 
                 SubscribeEvents();
 
@@ -55,10 +75,16 @@ namespace fs2ff.SimConnect
             }
         }
 
+        /// <summary>
+        /// Disconnects from the Flight Sim
+        /// </summary>
         public void Disconnect() => DisconnectInternal(FlightSimState.Disconnected);
 
         public void Dispose() => DisconnectInternal(FlightSimState.Disconnected);
 
+        /// <summary>
+        /// SimConnect message dispatcher
+        /// </summary>
         public void ReceiveMessage()
         {
             try
@@ -72,22 +98,101 @@ namespace fs2ff.SimConnect
             }
         }
 
-        public void SetAttitudeFrequency(uint frequency)
+        /// <summary>
+        /// Adjusts the range of the traffic that will be sent to the EFB in nautical miles
+        /// Note helicopters about hard set to 1/2 of fixed wing
+        /// </summary>
+        /// <param name="radius"></param>
+        public void SetTrafficMaxRadius(uint radius)
         {
-            _attitudeTimer?.Change(0, 1000 / frequency);
+            if (Connected)
+            {
+                var radiusMeters = radius.NmToMeters();
+                _simConnect?.RequestDataOnSimObjectType(REQUEST.TrafficAircraft, DEFINITION.Traffic, radiusMeters, SIMCONNECT_SIMOBJECT_TYPE.AIRCRAFT);
+                // Right now set Rotary craft 1/2 the distance of Aircraft
+                _simConnect?.RequestDataOnSimObjectType(REQUEST.TrafficHelicopter, DEFINITION.Traffic, radiusMeters / 2, SIMCONNECT_SIMOBJECT_TYPE.HELICOPTER);
+            }
         }
 
+        // GP ties Attitude, Ownership and Position (to a lesser extent) together in Synthetic Vision
+        // The spec on the GDL90 Spec on these is lower but a faster than spec rate
+        // seems to smooth out the SV. Garmin needs to decouple Owner from the SV pitch/roll/yaw values in SV.
+        public void SetAttitudeFrequency(uint frequency)
+        {
+            if (_lastSetFrequency != frequency && Connected)
+            {
+                SetAttitudeDataRate(frequency);
+            }
+        }
+
+        /// <summary>
+        /// This takes the frequency setting in the UI and coverts it to a frame latency value
+        /// I might want to move some of the values into a config file.
+        /// </summary>
+        /// <param name="frequency"></param>
+        private void SetAttitudeDataRate(uint frequency)
+        {
+            var rate = (1000 / frequency) / SimFrameLatencyMs;
+            rate = rate.AdjustToBounds<uint>(1, 1000);
+            uint posRate;
+            uint ownerRate;
+
+            if (ViewModelLocator.Main.DataGdl90Enabled)
+            {
+                posRate = (rate * 2).AdjustToBounds<uint>(5, 50);
+                ownerRate = posRate;
+            }
+            else
+            {
+                // For XTRAFFIC position is very closely coupled.
+                posRate = rate;
+                // Use this in XTRAFFIC to to store our owner location
+                ownerRate = 20;
+            }
+
+            // Required for GDL90. Owner report tightly tide to Attitude in GP Position not so much
+            _simConnect?.RequestDataOnSimObject(
+                REQUEST.Owner, DEFINITION.Traffic,
+                SimConnectImpl.SIMCONNECT_OBJECT_ID_USER,
+                SIMCONNECT_PERIOD.SIM_FRAME,
+                SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT,
+                0, ownerRate, 0);
+
+            // GDL90 specs calls for just 1hz but the EFBs I use work better at this rate
+            _simConnect?.RequestDataOnSimObject(
+                REQUEST.Position, DEFINITION.Position,
+                SimConnectImpl.SIMCONNECT_OBJECT_ID_USER,
+                SIMCONNECT_PERIOD.SIM_FRAME,
+                SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT,
+                0, posRate, 0);
+
+            _simConnect?.RequestDataOnSimObject(
+                REQUEST.Attitude, DEFINITION.Attitude,
+                SimConnectImpl.SIMCONNECT_OBJECT_ID_USER,
+                SIMCONNECT_PERIOD.SIM_FRAME,
+                SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT,
+                0, rate, 0);
+        }
+
+        /// <summary>
+        /// Make all the values float64
+        /// </summary>
+        /// <param name="defineId"></param>
+        /// <param name="datumName"></param>
+        /// <param name="unitsName"></param>
+        /// <param name="datumType"></param>
         private void AddToDataDefinition(DEFINITION defineId, string datumName, string? unitsName, SIMCONNECT_DATATYPE datumType = SIMCONNECT_DATATYPE.FLOAT64)
         {
             _simConnect?.AddToDataDefinition(defineId, datumName, unitsName, datumType, 0, SimConnectImpl.SIMCONNECT_UNUSED);
         }
 
+        /// <summary>
+        /// Tells SimConnect to disconnect from the simulator
+        /// </summary>
+        /// <param name="state"></param>
         private void DisconnectInternal(FlightSimState state)
         {
             UnsubscribeEvents();
-
-            _attitudeTimer?.Dispose();
-            _attitudeTimer = null;
 
             _simConnect?.Dispose();
             _simConnect = null;
@@ -95,6 +200,9 @@ namespace fs2ff.SimConnect
             StateChanged?.Invoke(state);
         }
 
+        /// <summary>
+        /// Register for Attitude events
+        /// </summary>
         private void RegisterAttitudeStruct()
         {
             AddToDataDefinition(DEFINITION.Attitude, "PLANE PITCH DEGREES", "Degrees");
@@ -111,23 +219,31 @@ namespace fs2ff.SimConnect
             _simConnect?.RegisterDataDefineStruct<Attitude>(DEFINITION.Attitude);
         }
 
+        /// <summary>
+        /// Register for position events
+        /// </summary>
         private void RegisterPositionStruct()
         {
             AddToDataDefinition(DEFINITION.Position, "PLANE LATITUDE", "Degrees");
             AddToDataDefinition(DEFINITION.Position, "PLANE LONGITUDE", "Degrees");
             AddToDataDefinition(DEFINITION.Position, "PLANE ALTITUDE", "Feet");
+            // Because X-Plane protocol uses self position in meters
+            AddToDataDefinition(DEFINITION.Position, "PLANE ALTITUDE", "meters");
             AddToDataDefinition(DEFINITION.Position, "GPS GROUND TRUE TRACK", "Degrees");
             AddToDataDefinition(DEFINITION.Position, "GPS GROUND SPEED", "Meters per second");
 
-            _simConnect?.RegisterDataDefineStruct<Position>(DEFINITION.Position);
+            _simConnect?.RegisterDataDefineStruct<PositionData>(DEFINITION.Position);
         }
 
+        /// <summary>
+        /// Register for traffic events (ADS-B events)
+        /// </summary>
         private void RegisterTrafficStruct()
         {
             AddToDataDefinition(DEFINITION.Traffic, "PLANE LATITUDE", "Degrees");
             AddToDataDefinition(DEFINITION.Traffic, "PLANE LONGITUDE", "Degrees");
             AddToDataDefinition(DEFINITION.Traffic, "PLANE ALTITUDE", "Feet");
-            // BUGBUG: All other traffic is reporting the Owners Pressure altitude (SU7) Use Plane Altitude instead
+            // BUGBUG: All other traffic is reporting the Owners Pressure altitude (SU7) Use Plane AltitudeFeet instead
             AddToDataDefinition(DEFINITION.Traffic, "PRESSURE ALTITUDE", "Feet");
             AddToDataDefinition(DEFINITION.Traffic, "VELOCITY WORLD Y", "Feet per minute");
             AddToDataDefinition(DEFINITION.Traffic, "SIM ON GROUND", "Bool", SIMCONNECT_DATATYPE.INT32);
@@ -147,30 +263,19 @@ namespace fs2ff.SimConnect
             AddToDataDefinition(DEFINITION.Traffic, "MAX G FORCE", "Gforce");
             AddToDataDefinition(DEFINITION.Traffic, "LIGHT BEACON", "Bool", SIMCONNECT_DATATYPE.INT32);
             AddToDataDefinition(DEFINITION.Traffic, "PLANE ALT ABOVE GROUND MINUS CG", "Feet");
- 
-             _simConnect?.RegisterDataDefineStruct<Traffic>(DEFINITION.Traffic);
+
+            _simConnect?.RegisterDataDefineStruct<TrafficData>(DEFINITION.Traffic);
         }
 
-        private void RequestAttitudeData(object? _)
-        {
-            try
-            {
-                _simConnect?.RequestDataOnSimObject(
-                    REQUEST.Attitude, DEFINITION.Attitude,
-                    SimConnectImpl.SIMCONNECT_OBJECT_ID_USER,
-                    SIMCONNECT_PERIOD.ONCE,
-                    SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT,
-                    0, 0, 0);
-            }
-            catch (COMException e)
-            {
-                Console.Error.WriteLine("Exception caught: " + e);
-            }
-        }
 
-        private void SimConnect_OnRecvEventObjectAddremove(SimConnectImpl sender, SIMCONNECT_RECV_EVENT_OBJECT_ADDREMOVE data)
+        /// <summary>
+        /// Tracks Traffic added after the initial connection
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="data"></param>
+        private void SimConnect_OnRecvEventObjectAddRemove(SimConnectImpl sender, SIMCONNECT_RECV_EVENT_OBJECT_ADDREMOVE data)
         {
-            if (data.uEventID == (uint) EVENT.ObjectAdded &&
+            if (data.uEventID == (uint)EVENT.ObjectAdded &&
                 (data.eObjType == SIMCONNECT_SIMOBJECT_TYPE.AIRCRAFT ||
                  data.eObjType == SIMCONNECT_SIMOBJECT_TYPE.HELICOPTER) &&
                 data.dwData != OBJECT_ID_USER_RESULT)
@@ -178,113 +283,118 @@ namespace fs2ff.SimConnect
                 _simConnect?.RequestDataOnSimObject(
                     REQUEST.TrafficObjectBase + data.dwData,
                     DEFINITION.Traffic, data.dwData,
-                    SIMCONNECT_PERIOD.SECOND,
+                    SIMCONNECT_PERIOD.SIM_FRAME,
                     SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT,
-                    0, 0, 0);
+                    0, DefaultTrafficRate, 0);
             }
         }
 
+        /// <summary>
+        /// SimConnect has raised an internal exception and we need to reset
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="data"></param>
         private void SimConnect_OnRecvException(SimConnectImpl sender, SIMCONNECT_RECV_EXCEPTION data)
         {
             Console.Error.WriteLine("Exception caught: " + data.dwException);
             DisconnectInternal(FlightSimState.ErrorOccurred);
         }
 
+        /// <summary>
+        /// Connection to SimConnect was successful.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="data"></param>
         private void SimConnect_OnRecvOpen(SimConnectImpl sender, SIMCONNECT_RECV data)
         {
             RegisterPositionStruct();
             RegisterAttitudeStruct();
             RegisterTrafficStruct();
 
-            if (ViewModelLocator.Main.DataGdl90Enabled)
-            {
-                // Sets the ownership report to run at ~10Hz.
-                // This is less taxing than pulling with ONCE
-                // SIM_FRAME = ~50hz or ~20ms (20ms * interval) so 5 * 20 == 100ms or 10Hz
-                // GDL90 spec is 5hz but I find this Synthetic vision smoother at 10hz or 20hz
-                _simConnect?.RequestDataOnSimObject(
-                    REQUEST.Owner, DEFINITION.Traffic,
-                    SimConnectImpl.SIMCONNECT_OBJECT_ID_USER,
-                    SIMCONNECT_PERIOD.SIM_FRAME,
-                    SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT,
-                    0, 2, 0);
-            }
+            this.SetAttitudeDataRate(ViewModelLocator.Main.AttitudeFrequency);
 
-            // Send GeoAlt at 5hz (10 * 20ms == 200ms)
-            // GDL90 specs calls for just 1hz but the EFBs I use work better at this rate
-            _simConnect?.RequestDataOnSimObject(
-                REQUEST.Position, DEFINITION.Position,
-                SimConnectImpl.SIMCONNECT_OBJECT_ID_USER,
-                SIMCONNECT_PERIOD.SIM_FRAME,
-                SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT,
-                0, 2, 0);
- 
-            _simConnect?.RequestDataOnSimObjectType(REQUEST.TrafficAircraft, DEFINITION.Traffic, AircraftRadius, SIMCONNECT_SIMOBJECT_TYPE.AIRCRAFT);
-            _simConnect?.RequestDataOnSimObjectType(REQUEST.TrafficHelicopter, DEFINITION.Traffic, HeliRadius, SIMCONNECT_SIMOBJECT_TYPE.HELICOPTER);
+            SetTrafficMaxRadius(ViewModelLocator.Main.TrafficRadiusNm);
 
             _simConnect?.SubscribeToSystemEvent(EVENT.ObjectAdded, "ObjectAdded");
             _simConnect?.SubscribeToSystemEvent(EVENT.SixHz, "6Hz");
-            
+
             // TODO: will use the Airport data for setting up FIS-B weather reports These are broken right now,
             // they return the same 1234 airports 31 times.
             // _simConnect?.RequestFacilitiesList(SIMCONNECT_FACILITY_LIST_TYPE.AIRPORT, REQUEST.Airport);
             //_simConnect?.SubscribeToFacilities(SIMCONNECT_FACILITY_LIST_TYPE.AIRPORT, REQUEST.Airport);
         }
 
+        /// <summary>
+        /// SimConnect layer or MSFS was closed
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="data"></param>
         private void SimConnect_OnRecvQuit(SimConnectImpl sender, SIMCONNECT_RECV data)
         {
             DisconnectInternal(FlightSimState.Quit);
         }
 
-        private async void SimConnect_OnRecvSimobjectData(SimConnectImpl sender, SIMCONNECT_RECV_SIMOBJECT_DATA data)
+        /// <summary>
+        /// Main callback for most data
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="data"></param>
+        private async void SimConnect_OnRecvSimObjectData(SimConnectImpl sender, SIMCONNECT_RECV_SIMOBJECT_DATA data)
         {
             if (data.dwRequestID == (uint)REQUEST.TrafficObjectBase)
             {
                 return;
             }
 
-            if (data.dwRequestID == (uint) REQUEST.Position &&
-                data.dwDefineID == (uint) DEFINITION.Position &&
-                data.dwData?.FirstOrDefault() is Position pos)
+            var dwObjectID = data.dwObjectID;
+
+            if (data.dwRequestID == (uint)REQUEST.Position &&
+                data.dwDefineID == (uint)DEFINITION.Position &&
+                data.dwData?.FirstOrDefault() is PositionData pd)
             {
+                var pos = new Position(pd, dwObjectID);
                 await PositionReceived.RaiseAsync(pos).ConfigureAwait(false);
                 return;
             }
 
-            if (data.dwRequestID == (uint) REQUEST.Attitude &&
-                data.dwDefineID == (uint) DEFINITION.Attitude &&
+            if (data.dwRequestID == (uint)REQUEST.Attitude &&
+                data.dwDefineID == (uint)DEFINITION.Attitude &&
                 data.dwData?.FirstOrDefault() is Attitude att)
             {
-
                 await AttitudeReceived.RaiseAsync(att).ConfigureAwait(false);
                 return;
             }
 
             if (data.dwRequestID == (uint)REQUEST.Owner &&
-                data.dwDefineID == (uint)DEFINITION.Traffic &&
-                (data.dwObjectID == OBJECT_ID_USER_RESULT 
-                || data.dwObjectID == SimConnectImpl.SIMCONNECT_OBJECT_ID_USER) &&
-                data.dwData?.FirstOrDefault() is Traffic owner)
+                data.dwDefineID == (uint)DEFINITION.Traffic)
             {
-                await OwnerReceived.RaiseAsync(owner, data.dwObjectID).ConfigureAwait(false);
+                if ((dwObjectID == OBJECT_ID_USER_RESULT
+                || dwObjectID == SimConnectImpl.SIMCONNECT_OBJECT_ID_USER) &&
+                data.dwData?.FirstOrDefault() is TrafficData od)
+                {
+                    await OwnerReceived.RaiseAsync(new Traffic(od, Gdl90Traffic.SelfIaco), OBJECT_ID_USER_RESULT).ConfigureAwait(false);
+                    return;
+                }
+
+                Debug.WriteLine($"Owner Request Bad: dwID: {data.dwID}, dwObjectID: {dwObjectID}");
                 return;
             }
 
-            if (data.dwRequestID == (uint) REQUEST.TrafficObjectBase + data.dwObjectID &&
-                data.dwDefineID == (uint) DEFINITION.Traffic &&
-                data.dwObjectID != OBJECT_ID_USER_RESULT &&
-                data.dwObjectID != SimConnectImpl.SIMCONNECT_OBJECT_ID_USER &&
-                data.dwData?.FirstOrDefault() is Traffic tfk)
+            if (data.dwRequestID == (uint)REQUEST.TrafficObjectBase + dwObjectID &&
+                data.dwDefineID == (uint)DEFINITION.Traffic &&
+                dwObjectID != OBJECT_ID_USER_RESULT &&
+                dwObjectID != SimConnectImpl.SIMCONNECT_OBJECT_ID_USER &&
+                data.dwData?.FirstOrDefault() is TrafficData td)
             {
                 // Prevents all the parked aircraft from showing up on ADS-B
                 // Modified to work better with VATSIM since it doesn't report Transponder state
-                if (!ViewModelLocator.Main.DataHideTrafficEnabled || !tfk.OnGround || tfk.TransponderState != TranssponderState.Off || tfk.LightBeaconOn)
+                if (!ViewModelLocator.Main.DataHideTrafficEnabled || !td.OnGround || td.TransponderState != TransponderState.Off || td.LightBeaconOn)
                 {
                     try
                     {
-                        await TrafficReceived.RaiseAsync(tfk, data.dwRequestID).ConfigureAwait(false);
+                        await TrafficReceived.RaiseAsync(new Traffic(td, dwObjectID), data.dwRequestID).ConfigureAwait(false);
                     }
-                    catch(Exception ex)
+                    catch (Exception ex)
                     {
                         // been getting some bad traffic lately just extra protection
                         Console.Error.WriteLine($"Exception: {ex}");
@@ -297,22 +407,31 @@ namespace fs2ff.SimConnect
             Debug.WriteLine($"Unhandled event: {data.dwID}");
         }
 
-        private void SimConnect_OnRecvSimobjectDataBytype(SimConnectImpl sender, SIMCONNECT_RECV_SIMOBJECT_DATA_BYTYPE data)
+        /// <summary>
+        /// Gets called anytime a new object (Aircraft, etc.) is added to the sim.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="data"></param>
+        private void SimConnect_OnRecvSimObjectDataByType(SimConnectImpl sender, SIMCONNECT_RECV_SIMOBJECT_DATA_BYTYPE data)
         {
-            if ((data.dwRequestID == (uint) REQUEST.TrafficAircraft ||
-                 data.dwRequestID == (uint) REQUEST.TrafficHelicopter) &&
-                data.dwDefineID == (uint) DEFINITION.Traffic &&
-                data.dwObjectID != OBJECT_ID_USER_RESULT)
+            var dwObjectID = data.dwObjectID;
+            if ((data.dwRequestID == (uint)REQUEST.TrafficAircraft ||
+                 data.dwRequestID == (uint)REQUEST.TrafficHelicopter) &&
+                data.dwDefineID == (uint)DEFINITION.Traffic &&
+                dwObjectID != OBJECT_ID_USER_RESULT)
             {
                 _simConnect?.RequestDataOnSimObject(
-                    REQUEST.TrafficObjectBase + data.dwObjectID,
-                    DEFINITION.Traffic, data.dwObjectID,
+                    REQUEST.TrafficObjectBase + dwObjectID,
+                    DEFINITION.Traffic, dwObjectID,
                     SIMCONNECT_PERIOD.SECOND,
                     SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT,
                     0, 0, 0);
             }
         }
 
+        /// <summary>
+        /// Enable callbacks on the selected events
+        /// </summary>
         private void SubscribeEvents()
         {
             if (_simConnect != null)
@@ -320,29 +439,33 @@ namespace fs2ff.SimConnect
                 _simConnect.OnRecvOpen += SimConnect_OnRecvOpen;
                 _simConnect.OnRecvQuit += SimConnect_OnRecvQuit;
                 _simConnect.OnRecvException += SimConnect_OnRecvException;
-                _simConnect.OnRecvSimobjectData += SimConnect_OnRecvSimobjectData;
-                _simConnect.OnRecvSimobjectDataBytype += SimConnect_OnRecvSimobjectDataBytype;
-                _simConnect.OnRecvEventObjectAddremove += SimConnect_OnRecvEventObjectAddremove;
-//                _simConnect.OnRecvAirportList += _simConnect_OnRecvAirportList;
-//                _simConnect.OnRecvCloudState += _simConnect_OnRecvCloudState;
+                _simConnect.OnRecvSimobjectData += SimConnect_OnRecvSimObjectData;
+                _simConnect.OnRecvSimobjectDataBytype += SimConnect_OnRecvSimObjectDataByType;
+                _simConnect.OnRecvEventObjectAddremove += SimConnect_OnRecvEventObjectAddRemove;
+                //                _simConnect.OnRecvAirportList += _simConnect_OnRecvAirportList;
+                //                _simConnect.OnRecvCloudState += _simConnect_OnRecvCloudState;
             }
         }
 
+        /// <summary>
+        /// Remove listeners
+        /// </summary>
         private void UnsubscribeEvents()
         {
             if (_simConnect != null)
             {
-                _simConnect.OnRecvEventObjectAddremove -= SimConnect_OnRecvEventObjectAddremove;
-                _simConnect.OnRecvSimobjectDataBytype -= SimConnect_OnRecvSimobjectDataBytype;
-                _simConnect.OnRecvSimobjectData -= SimConnect_OnRecvSimobjectData;
+                _simConnect.OnRecvEventObjectAddremove -= SimConnect_OnRecvEventObjectAddRemove;
+                _simConnect.OnRecvSimobjectDataBytype -= SimConnect_OnRecvSimObjectDataByType;
+                _simConnect.OnRecvSimobjectData -= SimConnect_OnRecvSimObjectData;
                 _simConnect.OnRecvException -= SimConnect_OnRecvException;
                 _simConnect.OnRecvQuit -= SimConnect_OnRecvQuit;
                 _simConnect.OnRecvOpen -= SimConnect_OnRecvOpen;
-//                _simConnect.OnRecvAirportList -= _simConnect_OnRecvAirportList;
-//                _simConnect.OnRecvCloudState += _simConnect_OnRecvCloudState;
+                //                _simConnect.OnRecvAirportList -= _simConnect_OnRecvAirportList;
+                //                _simConnect.OnRecvCloudState += _simConnect_OnRecvCloudState;
             }
         }
 
+        //TODO: this is future work on FIS-B I'll implement at some point
         //private void _simConnect_OnRecvCloudState(SimConnectImpl sender, SIMCONNECT_RECV_CLOUD_STATE data)
         //{
         //    Debug.WriteLine($"Data: {data.dwArraySize}");

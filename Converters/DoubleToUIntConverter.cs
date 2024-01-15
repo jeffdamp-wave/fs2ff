@@ -5,19 +5,19 @@ using System.Windows.Markup;
 
 namespace fs2ff.Converters
 {
-    public class UIntToDoubleConverter : MarkupExtension, IValueConverter
+    public class DoubleToUIntConverter : MarkupExtension, IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            return value is uint i
-                ? System.Convert.ToDouble(i)
+            return value is double d
+                ? System.Convert.ToUInt32(d)
                 : Binding.DoNothing;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            return value is double d
-                ? System.Convert.ToInt32(d)
+            return value is uint i
+                ? System.Convert.ToDouble(i)
                 : Binding.DoNothing;
         }
 

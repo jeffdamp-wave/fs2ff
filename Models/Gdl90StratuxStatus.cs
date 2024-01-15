@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace fs2ff.Models
 {
@@ -16,7 +14,7 @@ namespace fs2ff.Models
             Msg[2] = 1;
             Msg[3] = 1; // "message version".
 
-            for(int i = 4; i <= 11; i++)
+            for (int i = 4; i <= 11; i++)
             {
                 Msg[i] = 0xFF;
             }

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace fs2ff.Models
@@ -28,7 +27,7 @@ namespace fs2ff.Models
 
             // Charging ICON 0 not charging 0x10 charging
             Msg[26] = 0x10;
-            
+
             // rest is reserved
         }
     }
