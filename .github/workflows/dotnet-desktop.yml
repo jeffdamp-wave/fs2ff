@@ -84,7 +84,7 @@ jobs:
 
     # Restore the application to populate the obj folder with RuntimeIdentifiers
     - name: Build the application
-      run: dotnet publish --self-contained -c Configuration -r Platform_Name $env:Solution_Name
+      run: dotnet publish --self-contained -c  $env:Configuration -r  $env:Platform_Name $env:Solution_Name
       env:
         Configuration: ${{ matrix.configuration }}
 
