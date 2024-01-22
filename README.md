@@ -14,7 +14,7 @@ The executable is Windows .Net8 self-contained binary that has all of the needed
 1. You can select auto-detect* if you are using ForeFlight. FF broadcasts a message and setting this will allow for auto-detection.
 1. Run MSFS on the same computer(I'll add some remote options soon).
 1. Click connect
-1. For GDL90 Most EFBs will will detect the traffic and just start working. I recommend Stratux but you can also play around with Stratus emulation
+1. For GDL90 Most EFBs will detect the traffic and just start working. I recommend Stratux but you can also play around with Stratus emulation
 1. If you select the X-Plane protocol this will require some addition steps in most EFBs. Example in GP you have to go to settings->Flight Simulation and turn it on.
 
 ## Does it work with other EFB apps?
