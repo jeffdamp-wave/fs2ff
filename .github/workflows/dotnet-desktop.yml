@@ -5,7 +5,7 @@ on:
   push:
     branches: [ "master" ]
     tags:
-    - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
+    - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
 
 jobs:
 
@@ -16,6 +16,10 @@ jobs:
         configuration: [Release]
 
     runs-on: windows-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      repository-projects: write
 
     env:
       Solution_Name: fs2ff.sln
@@ -60,4 +64,4 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }} 
-        pattern: bin/Release/net8.0-windows/$env:Platform_Name/publish/*.*
+        pattern: fs2ff/bin/Release/net8.0-windows/$env:Platform_Name/publish/*.*
