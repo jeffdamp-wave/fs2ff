@@ -57,7 +57,6 @@ jobs:
         release_name: Release ${{ github.ref }}
         draft: false
         prerelease: false
-        skipIfReleaseExists: true
 
     - name: Upload Release Asset
       id: upload-release-asset
@@ -65,4 +64,4 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         release-url: ${{ steps.create_release.outputs.upload_url }}
-        pattern: ./bin/Release/net8.0-windows/$env:Platform_Name/publish/*.*
+        pattern: fs2ff/bin/Release/net8.0-windows/$env:Platform_Name/publish/*.*
