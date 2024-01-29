@@ -5,7 +5,7 @@ on:
   push:
     branches: [ "master" ]
     tags:
-    - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+    - "v*"  # Push events to matching v*, i.e. v1.0, v20.15.10
 
 jobs:
 
@@ -42,6 +42,7 @@ jobs:
       run: dotnet publish --self-contained -c  $env:Configuration -r  $env:Platform_Name $env:Solution_Name
       env:
         Configuration: ${{ matrix.configuration }}
+
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
@@ -52,6 +53,7 @@ jobs:
         release_name: Release ${{ github.ref }}
         draft: false
         prerelease: false
+        skipIfReleaseExists: true
 
     - name: Upload Release Asset
       id: upload-release-asset
