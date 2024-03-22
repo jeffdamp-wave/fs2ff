@@ -47,7 +47,7 @@ namespace fs2ff.Models
     /// </summary>
     public static class PositionExtensions
     {
-        public const double ValidSecond = 10;
+        public const double ValidSecond = 20;
 
         /// <summary>
         /// Is the position data valid
@@ -57,7 +57,7 @@ namespace fs2ff.Models
         public static bool IsValid(this Position pos)
         {
             var span = DateTime.UtcNow - pos.LastUpdate;
-            return pos.Pd.Latitude != 0 && pos.Pd.Longitude != 0 && span.TotalSeconds < ValidSecond;
+            return (Math.Round(pos.Pd.Latitude,1) != 0 && Math.Round(pos.Pd.Longitude, 1) != 0  || pos.Pd.GroundSpeedMps > 5) && span.TotalSeconds < ValidSecond;
         }
     }
 }

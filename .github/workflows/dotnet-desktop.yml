@@ -60,8 +60,8 @@ jobs:
 
     - name: Upload Release Asset
       id: upload-release-asset
-      uses: csexton/release-asset-action@v2
+      uses: csexton/release-asset-action@v3
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
+        pattern: fs2ff/bin/Release/net8.0-windows/win-x64/publish/*.*
         release-url: ${{ steps.create_release.outputs.upload_url }}
-        pattern: fs2ff/bin/Release/net8.0-windows/$env:Platform_Name/publish/*.*

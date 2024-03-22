@@ -91,7 +91,7 @@ namespace fs2ff
             _autoConnectTimer = new DispatcherTimer(TimeSpan.FromSeconds(5), DispatcherPriority.Normal, AutoConnectCallback, Dispatcher.CurrentDispatcher);
             _stratusTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(800), DispatcherPriority.Normal, SimConnectDeviceStatusUpdate, Dispatcher.CurrentDispatcher);
             _gdl90Timer = new DispatcherTimer(TimeSpan.FromMilliseconds(500), DispatcherPriority.Normal, SimConnectGdl90Update, Dispatcher.CurrentDispatcher);
-            _ownerInfo = new Traffic(new TrafficData(), 1);
+            _ownerInfo = new Traffic(new TrafficData(), Gdl90Traffic.SelfIaco, SimConnectAdapter.OBJECT_ID_USER_RESULT, DateTime.MinValue);
             _ownerInfo.LastUpdate = DateTime.MinValue;
 
             ManageAutoConnect();
@@ -588,10 +588,10 @@ namespace fs2ff
             }
         }
 
-        private async Task SimConnectTrafficReceived(Traffic tfk, uint id)
+        private async Task SimConnectTrafficReceived(Traffic tfk)
         {
             // Ignore traffic with id=1, that's our own aircraft
-            if (DataTrafficEnabled && id != SimConnectAdapter.OBJECT_ID_USER_RESULT)
+            if (DataTrafficEnabled && !tfk.IsOwner)
             {
                 bool send = true;
                 if (OwnerInfo.IsValid())
@@ -607,17 +607,17 @@ namespace fs2ff
 
                 if (send)
                 {
-                    await _dataSender.Send(tfk, id).ConfigureAwait(false);
+                    await _dataSender.Send(tfk).ConfigureAwait(false);
                 }
             }
         }
 
-        private async Task SimConnectOwnerReceived(Traffic tfk, uint id)
+        private async Task SimConnectOwnerReceived(Traffic tfk)
         {
             OwnerInfo = tfk;
             if (DataGdl90Enabled)
             {
-                await _dataSender.Send(tfk, id).ConfigureAwait(false);
+                await _dataSender.Send(tfk).ConfigureAwait(false);
             }
         }
 
