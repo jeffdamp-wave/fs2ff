@@ -105,7 +105,7 @@ namespace fs2ff
         /// <param name="t"></param>
         /// <param name="id"></param>
         /// <returns></returns>
-        public async Task Send(Traffic t, uint id)
+        public async Task Send(Traffic t)
         {
             if (!t.IsValid())
             {
@@ -114,7 +114,7 @@ namespace fs2ff
 
             if (ViewModelLocator.Main.DataGdl90Enabled)
             {
-                var traffic = new Gdl90Traffic(t, id);
+                var traffic = new Gdl90Traffic(t);
                 var data = traffic.ToGdl90Message();
                 await Send(data).ConfigureAwait(false);
             }

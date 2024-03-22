@@ -14,10 +14,10 @@ namespace fs2ff.Models
         /// </summary>
         /// <param name="td">Traffic object to convert</param>
         /// <param name="iaco">1 for owner otherwise iaco</param>
-        public Gdl90Traffic(Traffic traffic, uint iaco) : base(28)
+        public Gdl90Traffic(Traffic traffic) : base(28)
         {
             var td = traffic.Td;
-            var isOwner = iaco == SimConnectAdapter.OBJECT_ID_USER_RESULT;
+            var isOwner = traffic.IsOwner;
 
             // If current Traffic is not ourself then get the owner td for altering later
             var owner = isOwner ? traffic : ViewModelLocator.Main.OwnerInfo;
@@ -26,14 +26,13 @@ namespace fs2ff.Models
             if (isOwner)
             {
                 Msg[0] = 0xA;
-                iaco = SelfIaco;
             }
             else
             {
                 Msg[0] = 0x14;
             }
 
-            var code = BitConverter.GetBytes(iaco);
+            var code = BitConverter.GetBytes(traffic.Iaco);
             if (code[2] != 0xF0 && code[2] != 0x00)
             {
                 Msg[1] = 0x00; // ADS-B Out with ICAO

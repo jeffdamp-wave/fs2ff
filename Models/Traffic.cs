@@ -3,6 +3,8 @@
 using System;
 using System.Runtime.InteropServices;
 
+using fs2ff.SimConnect;
+
 namespace fs2ff.Models
 {
     /// <summary>
@@ -13,19 +15,26 @@ namespace fs2ff.Models
         public TrafficData Td { get; set; }
         public DateTime LastUpdate { get; set; }
         public uint Iaco {  get; set; }
-        public Traffic(TrafficData trafficData, uint iaco)
+
+        public uint ObjId { get; set; }
+
+        public Traffic(TrafficData trafficData, uint iaco, uint objId)
         {
             Td = trafficData;
             LastUpdate = DateTime.UtcNow;
             Iaco = iaco;
+            ObjId = objId;
         }
 
-        public Traffic(TrafficData trafficData, uint iaco, DateTime lastUpdate)
+        public Traffic(TrafficData trafficData, uint iaco, uint objId, DateTime lastUpdate)
         {
             Td = trafficData;
             LastUpdate = lastUpdate;
             Iaco = iaco;
+            ObjId = objId;
         }
+
+        public bool IsOwner => ObjId == SimConnectAdapter.OBJECT_ID_USER_RESULT;
     }
 
     /// <summary>
@@ -88,7 +97,7 @@ namespace fs2ff.Models
         public static bool IsValid(this Traffic t)
         {
             var span = DateTime.UtcNow - t.LastUpdate;
-            return t.Td.Latitude != 0 && t.Td.Longitude != 0 &&  span.TotalSeconds < ValidSecond;
+            return (Math.Round(t.Td.Latitude, 1) != 0 && Math.Round(t.Td.Longitude, 1) != 0 || t.Td.AirspeedTrue > 5) && span.TotalSeconds < ValidSecond;
         }
 
         /// <summary>

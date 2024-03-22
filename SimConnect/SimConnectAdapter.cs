@@ -43,8 +43,8 @@ namespace fs2ff.SimConnect
         public event Func<Attitude, Task>? AttitudeReceived;
         public event Func<Position, Task>? PositionReceived;
         public event Action<FlightSimState>? StateChanged;
-        public event Func<Traffic, uint, Task>? TrafficReceived;
-        public event Func<Traffic, uint, Task>? OwnerReceived;
+        public event Func<Traffic, Task>? TrafficReceived;
+        public event Func<Traffic, Task>? OwnerReceived;
 
         public bool Connected => _simConnect != null;
 
@@ -372,7 +372,7 @@ namespace fs2ff.SimConnect
                 || dwObjectID == SimConnectImpl.SIMCONNECT_OBJECT_ID_USER) &&
                 data.dwData?.FirstOrDefault() is TrafficData od)
                 {
-                    await OwnerReceived.RaiseAsync(new Traffic(od, Gdl90Traffic.SelfIaco), OBJECT_ID_USER_RESULT).ConfigureAwait(false);
+                    await OwnerReceived.RaiseAsync(new Traffic(od, Gdl90Traffic.SelfIaco, OBJECT_ID_USER_RESULT)).ConfigureAwait(false);
                     return;
                 }
 
@@ -392,7 +392,7 @@ namespace fs2ff.SimConnect
                 {
                     try
                     {
-                        await TrafficReceived.RaiseAsync(new Traffic(td, dwObjectID), data.dwRequestID).ConfigureAwait(false);
+                        await TrafficReceived.RaiseAsync(new Traffic(td, data.dwRequestID, data.dwRequestID)).ConfigureAwait(false);
                     }
                     catch (Exception ex)
                     {
