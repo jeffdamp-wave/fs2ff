@@ -1,10 +1,12 @@
 ﻿using fs2ff.Models;
 using fs2ff.SimConnect;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -42,7 +44,7 @@ namespace fs2ff
         private bool _dataStratuxEnabled = Preferences.Default.stratux_enabled;
         private bool _errorOccurred;
         private IntPtr _hwnd = IntPtr.Zero;
-        private IPAddress? _ipAddress;
+        private readonly IDictionary<string, IPAddress> _ipAddresses = new Dictionary<string, IPAddress>();
         private uint _ipHintMinutesLeft = Preferences.Default.ip_hint_time;
 
         /// <summary>
@@ -85,7 +87,15 @@ namespace fs2ff
             ToggleConnectCommand = new ActionCommand(ToggleConnect, CanConnect);
             ToggleSettingsPaneCommand = new ActionCommand(ToggleSettingsPane);
 
-            _ipAddress = IPAddress.TryParse(Preferences.Default.ip_address, out var ip) ? ip : null;
+            var splitIps = Preferences.Default.ip_address.Split(',');
+            foreach (var ipStr in splitIps)
+            {
+                var trimIpStr = ipStr.Trim();
+                if (IPAddress.TryParse(trimIpStr, out var ip))
+                {
+                    _ipAddresses.Add(ipStr, ip);
+                }
+            }
 
             _ipHintTimer = new DispatcherTimer(TimeSpan.FromMinutes(1), DispatcherPriority.Normal, IpHintCallback, Dispatcher.CurrentDispatcher);
             _autoConnectTimer = new DispatcherTimer(TimeSpan.FromSeconds(5), DispatcherPriority.Normal, AutoConnectCallback, Dispatcher.CurrentDispatcher);
@@ -329,28 +339,7 @@ namespace fs2ff
 
         public bool IndicatorVisible { get; private set; }
 
-        public IPAddress? IpAddress
-        {
-            get => _ipAddress;
-            set
-            {
-                if (!Equals(value, _ipAddress))
-                {
-                    _ipAddress = value;
-                    Preferences.Default.ip_address = value?.ToString() ?? "";
-                    Preferences.Default.Save();
-
-                    if (value != null)
-                    {
-                        ResetIpHintMinutesLeft();
-                    }
-
-                    ResetDataSenderConnection();
-                }
-            }
-        }
-
-        public bool IpHintVisible => IpAddress == null && IpHintMinutesLeft == 0;
+        public bool IpHintVisible => _ipAddresses.Count == 0 && IpHintMinutesLeft == 0;
 
         public bool NotLabelVisible { get; private set; }
 
@@ -368,6 +357,50 @@ namespace fs2ff
                     Preferences.Default.Save();
                 }
             }
+        }
+
+        public string IpAddressString
+        {
+            get
+            {
+                return ConvertIpsToString();
+            }
+            set
+            {
+                _ipAddresses.Clear();
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    var splitIps = value.Split(',');
+                    foreach (var ipStr in splitIps)
+                    {
+                        var trimIpStr = ipStr.Trim();
+                        if (IPAddress.TryParse(trimIpStr, out var address))
+                        {
+                            if (!_ipAddresses.ContainsKey(trimIpStr))
+                            {
+                                _ipAddresses.Add(trimIpStr, address);
+                            }
+                        }
+                    }
+                }
+
+                Preferences.Default.ip_address = ConvertIpsToString();
+            }
+        }
+
+        private string ConvertIpsToString()
+        {
+            var strBldr = new StringBuilder();
+            foreach (var ip in _ipAddresses.Keys)
+            {
+                if (strBldr.Length > 0)
+                {
+                    strBldr.Append(", ");
+                }
+                strBldr.Append(ip);
+            }
+
+            return strBldr.ToString();
         }
 
         public ActionCommand ToggleConnectCommand { get; }
@@ -452,13 +485,17 @@ namespace fs2ff
         {
             if (AutoDetectIpEnabled)
             {
-                IpAddress = ip;
+                if (!_ipAddresses.ContainsKey(ip.ToString()))
+                {
+                    _ipAddresses.Add(ip.ToString(), ip);
+                }
             }
         }
 
+
         private void IpHintCallback(object? sender, EventArgs e)
         {
-            if (IpHintMinutesLeft > 0 && IpAddress == null && _simConnect.Connected)
+            if (IpHintMinutesLeft > 0 && _ipAddresses?.Count == 0 && _simConnect.Connected)
             {
                 IpHintMinutesLeft--;
             }
@@ -482,7 +519,7 @@ namespace fs2ff
         {
             if (CurrentFlightSimState == FlightSimState.Connected)
             {
-                _dataSender.Connect(IpAddress);
+                _dataSender.Connect(_ipAddresses);
                 if (this._gdl90Enabled)
                 {
                     _stratusTimer.Start();
@@ -640,6 +677,5 @@ namespace fs2ff
                 _ => (false, false, true, false, true, "Connect")
             };
         }
-
     }
 }
