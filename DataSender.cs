@@ -1,5 +1,6 @@
 ﻿using fs2ff.Models;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
@@ -17,25 +18,25 @@ namespace fs2ff
         private const int Gdl90Port = 4000;
         private const string SimId = "MSFS";
 
-        private IPEndPoint? _endPoint;
+        private List<IPEndPoint> _endPoints = new List<IPEndPoint>();
         private Socket? _socket;
 
         /// <summary>
         /// Binds to a socket for transmission
         /// </summary>
         /// <param name="ip"></param>
-        public void Connect(IPAddress? ip)
+        public void Connect(IDictionary<string, IPAddress> ips)
         {
             Disconnect();
             int port = ViewModelLocator.Main.DataGdl90Enabled ? Gdl90Port : FlightSimPort;
 
-            ip ??= IPAddress.Broadcast;
-
-            _endPoint = new IPEndPoint(ip, port);
-            _socket = new Socket(_endPoint.Address.AddressFamily, SocketType.Dgram, ProtocolType.Udp)
+            foreach (var ip in ips)
             {
-                EnableBroadcast = ip.Equals(IPAddress.Broadcast),
-            };
+                var endPoint = new IPEndPoint(ip.Value, port);
+                _endPoints.Add(endPoint);
+            }
+
+            _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         }
 
         public void Disconnect() => _socket?.Dispose();
@@ -136,11 +137,15 @@ namespace fs2ff
         /// <returns></returns>
         private async Task Send(string data)
         {
-            if (_endPoint != null && _socket != null)
+            if (_socket != null)
             {
-                await _socket
-                    .SendToAsync(new ArraySegment<byte>(Encoding.ASCII.GetBytes(data)), SocketFlags.None, _endPoint)
-                    .ConfigureAwait(false);
+                var byteData = new ArraySegment<byte>(Encoding.ASCII.GetBytes(data));
+                foreach (var endPoint in _endPoints)
+                {
+                    await _socket
+                        .SendToAsync(byteData, SocketFlags.None, endPoint)
+                        .ConfigureAwait(false);
+                }
             }
         }
 
@@ -151,11 +156,14 @@ namespace fs2ff
         /// <returns></returns>
         public async Task Send(byte[] data)
         {
-            if (_endPoint != null && _socket != null)
+            if (_socket != null)
             {
-                await _socket
-                    .SendToAsync(data, SocketFlags.None, _endPoint)
-                    .ConfigureAwait(false);
+                foreach (var endPoint in _endPoints)
+                {
+                    await _socket
+                        .SendToAsync(data, SocketFlags.None, endPoint)
+                        .ConfigureAwait(false);
+                }
             }
         }
 

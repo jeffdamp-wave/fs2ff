@@ -94,8 +94,7 @@
                 <TextBox
                     ToolTip="Manually set the EFBs IP address here. Required for non FF EFBs."
                     Text="{
-                        Binding IpAddress, Mode=TwoWay,
-                        Converter={c:IpAddressToStringConverter},
+                        Binding IpAddressString, Mode=TwoWay,
                         UpdateSourceTrigger=PropertyChanged, Delay=5000}"
                     Template="{StaticResource WatermarkTextBoxTemplate}"
                     Tag="192.168.0.42"
