@@ -35,6 +35,8 @@ namespace fs2ff.SimConnect
         private const string AppName = "fs2ff";
         private const uint WM_USER_SIMCONNECT = 0x0402;
 
+        private uint ownship_id = 0;
+
 
         private SimConnectImpl? _simConnect;
 
@@ -278,7 +280,7 @@ namespace fs2ff.SimConnect
             if (data.uEventID == (uint)EVENT.ObjectAdded &&
                 (data.eObjType == SIMCONNECT_SIMOBJECT_TYPE.AIRCRAFT ||
                  data.eObjType == SIMCONNECT_SIMOBJECT_TYPE.HELICOPTER) &&
-                data.dwData != OBJECT_ID_USER_RESULT)
+                data.dwData != ownship_id)
             {
                 _simConnect?.RequestDataOnSimObject(
                     REQUEST.TrafficObjectBase + data.dwData,
@@ -352,6 +354,8 @@ namespace fs2ff.SimConnect
                 data.dwDefineID == (uint)DEFINITION.Position &&
                 data.dwData?.FirstOrDefault() is PositionData pd)
             {
+                // This event is only ever received for ownship. We assume that the object id we get here identifies our aircraft.
+                UpdateOwnshipID(dwObjectID);
                 var pos = new Position(pd, dwObjectID);
                 await PositionReceived.RaiseAsync(pos).ConfigureAwait(false);
                 return;
@@ -368,24 +372,24 @@ namespace fs2ff.SimConnect
             if (data.dwRequestID == (uint)REQUEST.Owner &&
                 data.dwDefineID == (uint)DEFINITION.Traffic)
             {
-                if ((dwObjectID == OBJECT_ID_USER_RESULT
-                || dwObjectID == SimConnectImpl.SIMCONNECT_OBJECT_ID_USER) &&
-                data.dwData?.FirstOrDefault() is TrafficData od)
+                if (data.dwData?.FirstOrDefault() is TrafficData od)
                 {
                     await OwnerReceived.RaiseAsync(new Traffic(od, Gdl90Traffic.SelfIaco, OBJECT_ID_USER_RESULT)).ConfigureAwait(false);
                     return;
                 }
 
-                Debug.WriteLine($"Owner Request Bad: dwID: {data.dwID}, dwObjectID: {dwObjectID}");
+                Debug.WriteLine($"Invalid ownship traffic report for id {dwObjectID}");
                 return;
             }
 
             if (data.dwRequestID == (uint)REQUEST.TrafficObjectBase + dwObjectID &&
                 data.dwDefineID == (uint)DEFINITION.Traffic &&
-                dwObjectID != OBJECT_ID_USER_RESULT &&
-                dwObjectID != SimConnectImpl.SIMCONNECT_OBJECT_ID_USER &&
                 data.dwData?.FirstOrDefault() is TrafficData td)
             {
+                if (dwObjectID == ownship_id)
+                {
+                    return;
+                }
                 // Prevents all the parked aircraft from showing up on ADS-B
                 // Modified to work better with VATSIM since it doesn't report Transponder state
                 if (!ViewModelLocator.Main.DataHideTrafficEnabled || !td.OnGround || td.TransponderState != TransponderState.Off || td.LightBeaconOn)
@@ -407,6 +411,15 @@ namespace fs2ff.SimConnect
             Debug.WriteLine($"Unhandled event: {data.dwID}");
         }
 
+        private void UpdateOwnshipID(uint dwObjectID)
+        {
+            if (ownship_id != dwObjectID)
+            {
+                Debug.WriteLine($"Ownship is {dwObjectID}");
+                ownship_id = dwObjectID;
+            }
+        }
+
         /// <summary>
         /// Gets called anytime a new object (Aircraft, etc.) is added to the sim.
         /// </summary>
@@ -418,7 +431,7 @@ namespace fs2ff.SimConnect
             if ((data.dwRequestID == (uint)REQUEST.TrafficAircraft ||
                  data.dwRequestID == (uint)REQUEST.TrafficHelicopter) &&
                 data.dwDefineID == (uint)DEFINITION.Traffic &&
-                dwObjectID != OBJECT_ID_USER_RESULT)
+                dwObjectID != ownship_id)
             {
                 _simConnect?.RequestDataOnSimObject(
                     REQUEST.TrafficObjectBase + dwObjectID,
