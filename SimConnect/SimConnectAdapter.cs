@@ -18,6 +18,8 @@ namespace fs2ff.SimConnect
         /// </summary>
         public const uint OBJECT_ID_USER_RESULT = 1;
 
+        public const uint OBJECT_ID_2024_USER = 38912000;
+
         /// <summary>
         /// SIM_FRAME latency tested on my machine (7800X3d) to be ~10ms not sure if this is different on other machines
         /// </summary>
@@ -278,7 +280,7 @@ namespace fs2ff.SimConnect
             if (data.uEventID == (uint)EVENT.ObjectAdded &&
                 (data.eObjType == SIMCONNECT_SIMOBJECT_TYPE.AIRCRAFT ||
                  data.eObjType == SIMCONNECT_SIMOBJECT_TYPE.HELICOPTER) &&
-                data.dwData != OBJECT_ID_USER_RESULT)
+                (data.dwData != OBJECT_ID_USER_RESULT || data.dwData != OBJECT_ID_2024_USER))
             {
                 _simConnect?.RequestDataOnSimObject(
                     REQUEST.TrafficObjectBase + data.dwData,
@@ -368,8 +370,9 @@ namespace fs2ff.SimConnect
             if (data.dwRequestID == (uint)REQUEST.Owner &&
                 data.dwDefineID == (uint)DEFINITION.Traffic)
             {
-                if ((dwObjectID == OBJECT_ID_USER_RESULT
-                || dwObjectID == SimConnectImpl.SIMCONNECT_OBJECT_ID_USER) &&
+                if((dwObjectID == OBJECT_ID_USER_RESULT
+                || dwObjectID == SimConnectImpl.SIMCONNECT_OBJECT_ID_USER
+                || dwObjectID == OBJECT_ID_2024_USER) &&
                 data.dwData?.FirstOrDefault() is TrafficData od)
                 {
                     await OwnerReceived.RaiseAsync(new Traffic(od, Gdl90Traffic.SelfIaco, OBJECT_ID_USER_RESULT)).ConfigureAwait(false);
@@ -383,6 +386,7 @@ namespace fs2ff.SimConnect
             if (data.dwRequestID == (uint)REQUEST.TrafficObjectBase + dwObjectID &&
                 data.dwDefineID == (uint)DEFINITION.Traffic &&
                 dwObjectID != OBJECT_ID_USER_RESULT &&
+                dwObjectID != OBJECT_ID_2024_USER &&
                 dwObjectID != SimConnectImpl.SIMCONNECT_OBJECT_ID_USER &&
                 data.dwData?.FirstOrDefault() is TrafficData td)
             {
@@ -418,7 +422,8 @@ namespace fs2ff.SimConnect
             if ((data.dwRequestID == (uint)REQUEST.TrafficAircraft ||
                  data.dwRequestID == (uint)REQUEST.TrafficHelicopter) &&
                 data.dwDefineID == (uint)DEFINITION.Traffic &&
-                dwObjectID != OBJECT_ID_USER_RESULT)
+                dwObjectID != OBJECT_ID_USER_RESULT &&
+                dwObjectID != OBJECT_ID_2024_USER)
             {
                 _simConnect?.RequestDataOnSimObject(
                     REQUEST.TrafficObjectBase + dwObjectID,
