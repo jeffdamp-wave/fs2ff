@@ -29,14 +29,8 @@ namespace fs2ff
         {
             Disconnect();
             int port = ViewModelLocator.Main.DataGdl90Enabled ? Gdl90Port : FlightSimPort;
-            bool hasBroadcast = false;
 
             if (ips.ContainsKey("255.255.255.255"))
-            {
-                hasBroadcast = true;
-            }
-
-            if (hasBroadcast)
             {
                 _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
                 _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, true);
