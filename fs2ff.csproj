@@ -8,7 +8,7 @@
     <UseWPF>true</UseWPF>
     <LangVersion>8</LangVersion>
     <Nullable>enable</Nullable>
-    <Version>1.8.5</Version>
+    <Version>1.8.6</Version>
     <StartupObject />
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
