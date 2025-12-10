@@ -10,7 +10,7 @@
       "request": "launch",
       "preLaunchTask": "build",
       // If you have changed target frameworks, make sure to update the program path.
-      "program": "${workspaceFolder}/bin/Debug/netcoreapp3.1/win-x64/fs2ff.exe",
+      "program": "${workspaceFolder}/bin/Debug/net8.0-windows/fs2ff.exe",
       "args": [],
       "cwd": "${workspaceFolder}",
       // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
